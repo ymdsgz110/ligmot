@@ -308,7 +308,7 @@ document.addEventListener("click", async (e) => {
     });
 
     // Reading取得
-const readingQuestions = Array.from(document.querySelectorAll('#reading-questions > .card')).map(div => {
+  const readingQuestions = Array.from(document.querySelectorAll('#reading-questions > .card')).map(div => {
   const textArea = div.querySelector('.reading-text');
   const text = textArea ? textArea.value.trim() : ""; // 念のため安全に取得
   const subquestions = Array.from(div.querySelectorAll('.reading-questions-list .card')).map(qDiv => {
@@ -334,10 +334,9 @@ const readingQuestions = Array.from(document.querySelectorAll('#reading-question
       publishTo = checked;
     }
 
-    // Firestoreのサーバータイムスタンプ
     const { serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js");
 
-    // 保存用オブジェクト
+    // 保存
     const activityData = {
       title,
       deadline,
@@ -359,8 +358,6 @@ const readingQuestions = Array.from(document.querySelectorAll('#reading-question
   }
 });
 
-
-    // === ユーザ情報 ===
     const users = {
       "aduser0110": { password: "ady8453", role: "admin" },
       "test0110":   { password: "assalam", role: "user" },
@@ -443,6 +440,10 @@ const readingQuestions = Array.from(document.querySelectorAll('#reading-question
         document.getElementById('menu-grammar-admin').classList.add('hidden');
         document.getElementById('menu-wordlist').classList.add('hidden');
         document.getElementById('menu-adactivity').classList.add('hidden');
+        document.getElementById('menu-socials').classList.add('hidden');
+        document.getElementById('menu-sciences').classList.add('hidden');
+        document.getElementById('menu-japaneses').classList.add('hidden');
+
       }
       // start session countdown
       startSessionCountdown();
@@ -474,7 +475,6 @@ document.getElementById('menu-test').addEventListener('click', ()=> { if(!testAc
 document.getElementById('menu-history').addEventListener('click', ()=> { if(!testActive) renderHistory(); });
 document.getElementById('menu-create').addEventListener('click', ()=> { if(!testActive) renderCreateForm(); });
 document.getElementById('menu-list').addEventListener('click', ()=> { if(!testActive) loadPartsList(); });
-
 document.getElementById('menu-useradmin').addEventListener('click', ()=> { if(!testActive) renderUserManagement(); });
 document.getElementById('menu-grammar-admin').addEventListener('click', ()=> { if(!testActive) renderGrammarAdminHome(); });
 document.getElementById('menu-wordlist').addEventListener('click', ()=> { 
@@ -512,7 +512,6 @@ function renderActivityAdmin() {
 }
 
 
-// アクティビティ作成 //
 function renderCreateActivity() {
     document.getElementById('activity-admin-area').innerHTML = `
         <h3 style="font-family:sans-serif; margin-bottom:16px;">新しいアクティビティ作成</h3>
@@ -901,7 +900,6 @@ function renderSubmissionDetail(submissionId, answers, activity) {
 }
 
 
-
 // ================================
 // 🧭 アクティビティ機能（ユーザー用）
 // ================================
@@ -926,7 +924,7 @@ document.getElementById("menu-activity").addEventListener("click", async () => {
 
   const listDiv = document.getElementById("activity-list");
 
-  // 🔹 Firestoreで全ユーザーの提出状況を取得
+  // 🔹 全提出データを取得
   const submissionsSnap = await getDocs(collection(db, "activity_submissions"));
   const submissions = submissionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -936,11 +934,14 @@ document.getElementById("menu-activity").addEventListener("click", async () => {
     const deadlineDate = new Date(act.deadline);
     const expired = today > deadlineDate;
 
-    // ユーザー固有の提出判定
+    // 🔍 このユーザーの提出データ
     const userSubmission = submissions.find(s => s.activityId === act.id && s.userId === currentUser.id);
+
     const submitted = !!userSubmission;
-    const showNew = !submitted && !expired; // NEW表示
-    const showSubmitted = submitted && !expired; // 提出済み表示
+    const returned = userSubmission?.score !== undefined; // フィードバックあり
+
+    const showNew = !submitted && !expired;
+    const showSubmitted = submitted && !expired;
 
     const btnText = expired ? "期限切れ" : "実施する";
     const btnClass = expired ? "btn-expired" : "btn-execute";
@@ -950,34 +951,48 @@ document.getElementById("menu-activity").addEventListener("click", async () => {
     div.style.padding = "12px";
     div.style.background = "#fff";
     div.style.boxShadow = "0 2px 6px rgba(0,0,0,0.08)";
-    div.style.position = "relative"; // アイコン用
+    div.style.position = "relative";
     div.style.border = "2px solid #ccc";
 
-    // 左上アイコン HTML
     let badgeHtml = "";
     if (showNew) {
       badgeHtml = '<span style="position:absolute; top:10px; left:10px; background:#ff3b30; color:#fff; padding:2px 6px; border-radius:6px; font-size:12px;">NEW</span>';
     } else if (showSubmitted) {
-      badgeHtml = '<span style="position:absolute; top:10px; left:10px; background:#aaa; color:#fff; padding:2px 2px 2px 4px; border-radius:6px; font-size:12px;">提出済み</span>';
+      badgeHtml = '<span style="position:absolute; top:10px; left:10px; background:#aaa; color:#fff; padding:2px 6px; border-radius:6px; font-size:12px;">提出済み</span>';
     }
 
     div.innerHTML = `
       ${badgeHtml}
       <h3>${act.title}</h3>
       <p>提出期限：${act.deadline}</p>
-      <button class="btn-do-activity ${btnClass}" data-id="${act.id}" ${expired ? "disabled" : ""}>
-        ${btnText}
-      </button>
+
+      <div style="display:flex; gap:10px; margin-top:10px;">
+
+        <!-- 実施ボタン -->
+        <button class="btn-do-activity ${btnClass}" data-id="${act.id}" ${expired ? "disabled" : ""}>
+          ${btnText}
+        </button>
+
+        <!-- フィードバックを見る -->
+        ${returned ? `
+          <button class="btn-feedback" data-id="${act.id}" style="
+            background:#4CAF50; color:#fff; border:none; border-radius:8px;
+            padding:8px 14px; cursor:pointer;
+          ">
+            フィードバックを見る
+          </button>
+        ` : ""}
+      </div>
     `;
+
     listDiv.appendChild(div);
   });
 
   // ボタンスタイル
   const style = document.createElement("style");
   style.textContent = `
-    .btn-execute { background: #ff3b30; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; cursor: pointer; transition: 0.2s; }
-    .btn-execute:hover { background: #ff5a4d; }
-    .btn-expired { background: #ccc; color: #666; border: none; border-radius: 8px; padding: 8px 14px; cursor: not-allowed; }
+    .btn-execute { background:#ff3b30; color:#fff; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; }
+    .btn-expired { background:#ccc; color:#666; border:none; border-radius:8px; padding:8px 14px; cursor:not-allowed; }
   `;
   document.head.appendChild(style);
 
@@ -989,7 +1004,49 @@ document.getElementById("menu-activity").addEventListener("click", async () => {
       if (confirmed) await renderActivityExecution(actId);
     });
   });
+
+  // フィードバックを見る
+  document.querySelectorAll(".btn-feedback").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const actId = btn.dataset.id;
+      const submission = submissions.find(s => s.activityId === actId && s.userId === currentUser.id);
+      renderActivityFeedback(actId, submission);
+    });
+  });
 });
+
+
+// ===============================
+// 📘 フィードバック表示画面（修正版）
+// ===============================
+function renderActivityFeedback(activityId, submission) {
+  const content = document.getElementById("content");
+
+  content.innerHTML = `
+    <div class="card">
+      <h2>フィードバック</h2>
+
+      <p><strong>点数：</strong> ${submission.score ?? "未採点"}</p>
+
+      <p><strong>コメント：</strong></p>
+      <div style="
+        white-space:pre-wrap;
+        padding:12px;
+        border:1px solid #ccc;
+        border-radius:8px;
+        background:#f9f9f9;
+      ">
+        ${submission.comment ?? "まだコメントがありません。"}
+      </div>
+
+      <button id="btn-back" style="margin-top:20px;">一覧に戻る</button>
+    </div>
+  `;
+
+  document.getElementById("btn-back").addEventListener("click", () => {
+    document.getElementById("menu-activity").click();
+  });
+}
 
 
 // ================================
@@ -1760,13 +1817,12 @@ async function loadAndShowYearQuestions(keyword = '') {
 
 
 
+
 // ==========================
-// 一問一答：問題作成フォーム
-// ==========================
+// 一問一答：問題作成フォーム（別解対応版）
 function renderIchimonCreateForm(editData) {
   const area = document.getElementById("social-admin-area");
 
-  // 編集モードかどうか判定
   const isEdit = editData && editData.id;
   const data = editData?.data || {};
 
@@ -1774,7 +1830,7 @@ function renderIchimonCreateForm(editData) {
     <div class="card">
       <h3>一問一答 — ${isEdit ? '問題編集' : '問題作成'}</h3>
       <p style="color:#666;margin-bottom:12px;">
-        問題文・答え（複数可）・スコア・クラス・レベルを入力して保存します。
+        問題文・答え（複数可）・別解・スコア・クラス・レベルを入力して保存します。
       </p>
 
       <label>クラス</label><br>
@@ -1790,7 +1846,7 @@ function renderIchimonCreateForm(editData) {
       <label>問題文</label><br>
       <textarea id="ichimon-question" style="width:100%;height:100px;margin-bottom:12px;">${data.question || ''}</textarea>
 
-      <label>答え</label>
+      <label>答え（メインと別解を追加可能）</label>
       <div id="ichimon-answers" style="margin-bottom:12px;"></div>
       <button id="add-answer" class="btn-plain" style="margin-bottom:12px;">＋ 答えを追加</button>
 
@@ -1808,42 +1864,72 @@ function renderIchimonCreateForm(editData) {
 
   // 既存の答えがある場合は追加
   if (data.answers?.length) {
-    data.answers.forEach(ans => addAnswerField(ans));
+    data.answers.forEach(ansObj => addAnswerField(ansObj.main, ansObj.alternatives || []));
   } else {
     addAnswerField();
   }
 
-  document.getElementById("add-answer").addEventListener("click", addAnswerField);
+  document.getElementById("add-answer").addEventListener("click", () => addAnswerField());
   document.getElementById("back-to-socials").addEventListener("click", renderSocialsAdmin);
 
-  function addAnswerField(value = "") {
+  // --- 答えフィールド追加 ---
+  function addAnswerField(mainValue = "", altValues = []) {
     const idx = answersDiv.children.length + 1;
     const wrapper = document.createElement("div");
-    wrapper.style.marginBottom = "8px";
+    wrapper.style.marginBottom = "12px";
     wrapper.innerHTML = `
       <label>答え ${idx}：</label><br>
-      <input type="text" class="ichimon-answer" style="width:80%;" value="${value}">
+      <input type="text" class="ichimon-main-answer" placeholder="メイン答え" style="width:60%;" value="${mainValue}">
       <button class="btn-plain btn-delete-answer">削除</button>
+      <div class="alt-answers" style="margin-top:4px; margin-left:16px;"></div>
+      <button class="btn-plain btn-add-alt">＋ 別解を追加</button>
     `;
     answersDiv.appendChild(wrapper);
+
+    const altDiv = wrapper.querySelector(".alt-answers");
+
+    // 既存の別解がある場合は追加
+    altValues.forEach(v => addAltField(v));
+
+    // 削除ボタン
     wrapper.querySelector(".btn-delete-answer").addEventListener("click", () => {
       wrapper.remove();
-      // 再番号
       Array.from(answersDiv.children).forEach((c, i) => {
         c.querySelector("label").innerText = "答え " + (i + 1) + "：";
       });
     });
+
+    // 別解追加ボタン
+    wrapper.querySelector(".btn-add-alt").addEventListener("click", () => addAltField());
+
+    function addAltField(value = "") {
+      const altWrapper = document.createElement("div");
+      altWrapper.style.marginBottom = "4px";
+      altWrapper.innerHTML = `
+        <input type="text" class="ichimon-alt-answer" placeholder="別解" style="width:50%;" value="${value}">
+        <button class="btn-plain btn-delete-alt">削除</button>
+      `;
+      altDiv.appendChild(altWrapper);
+
+      altWrapper.querySelector(".btn-delete-alt").addEventListener("click", () => altWrapper.remove());
+    }
   }
 
-  // === 保存/更新ボタン ===
+  // --- 保存/更新 ---
   document.getElementById("save-ichimon").addEventListener("click", async () => {
     const ichimonClass = document.getElementById("ichimon-class").value.trim();
     const level = document.getElementById("ichimon-level").value;
     const question = document.getElementById("ichimon-question").value.trim();
     const score = Number(document.getElementById("ichimon-score").value);
-    const answers = Array.from(document.querySelectorAll(".ichimon-answer"))
-      .map(a => a.value.trim())
-      .filter(a => a);
+
+    // answersをオブジェクトで取得
+    const answers = Array.from(answersDiv.children).map(wrapper => {
+      const main = wrapper.querySelector(".ichimon-main-answer")?.value.trim();
+      const alternatives = Array.from(wrapper.querySelectorAll(".ichimon-alt-answer"))
+        .map(a => a.value.trim())
+        .filter(a => a);
+      return main ? { main, alternatives } : null;
+    }).filter(a => a);
 
     if (!question || answers.length === 0) {
       alert("問題文と答えを入力してください。");
@@ -1852,7 +1938,6 @@ function renderIchimonCreateForm(editData) {
 
     try {
       if (isEdit) {
-        // 更新
         await updateDoc(doc(db, "ichimon_questions", editData.id), {
           class: ichimonClass || "",
           level,
@@ -1862,7 +1947,6 @@ function renderIchimonCreateForm(editData) {
         });
         alert("更新しました！");
       } else {
-        // 新規作成
         await addDoc(collection(db, "ichimon_questions"), {
           class: ichimonClass || "",
           level,
@@ -1881,11 +1965,10 @@ function renderIchimonCreateForm(editData) {
   });
 }
 
-// ==========================
-// 一問一答：一覧・編集画面
-// ==========================
 
-// --- 一問一答：一覧と検索（編集ボタンを含む） ---
+// ==========================
+// 一問一答：一覧・編集画面 
+// ==========================
 async function renderIchimonList() {
   const area = document.getElementById('social-admin-area');
   area.innerHTML = `
@@ -1922,7 +2005,13 @@ async function loadAndShowIchimonQuestions(keyword = '') {
     const filtered = keyword
       ? docs.filter(d => {
           const qMatch = (d.question || '').toLowerCase().includes(keyword.toLowerCase());
-          const aMatch = (d.answers || []).some(a => (a || '').toLowerCase().includes(keyword.toLowerCase()));
+          const aMatch = (d.answers || []).some(a => {
+            // 旧形式文字列か新形式オブジェクトかを判定
+            if (typeof a === "string") return a.toLowerCase().includes(keyword.toLowerCase());
+            const main = a.main || "";
+            const alts = Array.isArray(a.alternatives) ? a.alternatives : [];
+            return main.toLowerCase().includes(keyword.toLowerCase()) || alts.some(alt => alt.toLowerCase().includes(keyword.toLowerCase()));
+          });
           return qMatch || aMatch;
         })
       : docs;
@@ -1936,6 +2025,14 @@ async function loadAndShowIchimonQuestions(keyword = '') {
       return;
     }
 
+    const displayAnswer = (a) => {
+      if (!a) return "";
+      if (typeof a === "string") return escHtml(a); // 旧形式対応
+      const main = a.main || "";
+      const alts = Array.isArray(a.alternatives) ? a.alternatives : [];
+      return escHtml(main + (alts.length ? " (" + alts.join(", ") + ")" : ""));
+    };
+
     let html = `<div style="display:flex;flex-direction:column;gap:8px;">`;
     filtered.forEach(item => {
       html += `
@@ -1944,7 +2041,9 @@ async function loadAndShowIchimonQuestions(keyword = '') {
           <div style="flex:1;">
             <div style="font-weight:700;margin-bottom:6px;">${escHtml(item.question)}</div>
             <div style="font-size:14px;color:#666;margin-bottom:2px;">
-              答え: <strong>${(item.answers || []).map(a => escHtml(a)).join(', ')}</strong>
+              答え: <strong>${
+                (item.answers || []).map(displayAnswer).join(", ")
+              }</strong>
             </div>
             <div style="font-size:14px;color:#666;margin-bottom:2px;">
               配点: ${escHtml(String(item.score || 0))} ・ レベル: ${escHtml(item.level || '-')}
@@ -2000,6 +2099,8 @@ async function loadAndShowIchimonQuestions(keyword = '') {
     listEl.innerHTML = `<div style="color:#c00">取得に失敗しました: ${escHtml(err.message || err)}</div>`;
   }
 }
+
+
 
 
 // 社会一問一答範囲選択画面
@@ -2153,10 +2254,12 @@ function renderIchimonTrainingSetup() {
 }
 
 
-
-//社会一問一答テスト実施画面//
+// 社会一問一答テスト実施画面 //
 let currentIchimonTest = null;
 
+// ======================================================
+// 問題ロード
+// ======================================================
 async function loadIchimonQuestions(selectedRanges, selectedLevel, limitCount) {
   const q = query(
     collection(db, "ichimon_questions"),
@@ -2170,13 +2273,29 @@ async function loadIchimonQuestions(selectedRanges, selectedLevel, limitCount) {
   return questions.slice(0, limitCount);
 }
 
+// ======================================================
+// テスト開始
+// ======================================================
 async function startIchimonTest(selectedRanges, selectedLevel, questionCount) {
   const questionList = await loadIchimonQuestions(selectedRanges, selectedLevel, questionCount);
-  if (questionList.length === 0) { alert("指定した範囲・レベルの問題がありません。"); return; }
-  currentIchimonTest = { questions: questionList, index: 0, correct: 0 };
+  if (questionList.length === 0) {
+    alert("指定した範囲・レベルの問題がありません。");
+    return;
+  }
+
+  currentIchimonTest = {
+    questions: questionList,
+    index: 0,
+    correct: 0,
+    userAnswers: [] // ユーザー解答記録
+  };
+
   renderIchimonTestQuestion();
 }
 
+// ======================================================
+// 問題表示
+// ======================================================
 function renderIchimonTestQuestion() {
   const area = document.getElementById("content");
   const test = currentIchimonTest;
@@ -2187,17 +2306,19 @@ function renderIchimonTestQuestion() {
     answerFields += `
       <div style="margin-bottom:12px;">
         <label>（${i + 1}）</label>
-        <input id="ichimon-answer-${i}" class="input" style="
-          width:80%;
-          height:40px;
-          margin-top:4px;
-          padding:6px 8px;
-          border-radius:12px;
-          border:2px solid #ccc;
-          font-size:16px;
-          outline:none;
-          box-shadow:none;
-        ">
+        <input id="ichimon-answer-${i}" class="input"
+          style="
+            width:80%;
+            height:40px;
+            margin-top:4px;
+            padding:6px 8px;
+            border-radius:12px;
+            border:2px solid #ccc;
+            font-size:16px;
+            outline:none;
+            box-shadow:none;
+            white-space: pre-wrap;
+          ">
       </div>
     `;
   });
@@ -2205,75 +2326,108 @@ function renderIchimonTestQuestion() {
   area.innerHTML = `
     <div class="card" style="position:relative; padding:32px;">
       <h2>第 ${test.index + 1} 問 / ${test.questions.length}</h2>
-      <div style="margin-top:20px;font-size:20px;">${q.question}</div>
+      <div style="margin-top:20px;font-size:20px; white-space: pre-wrap;">${q.question}</div>
 
       <div id="answer-area" style="margin-top:24px;">
         ${answerFields}
       </div>
 
       <div style="text-align:left;margin-top:32px;">
-        <button id="ichimon-next" class="btn-primary" style="
-          padding:14px 36px;
-          font-size:18px;
-          border-radius:12px;
-        ">答え合わせ</button>
+        <button id="ichimon-next" class="btn-primary"
+          style="padding:14px 36px; font-size:18px; border-radius:12px;">
+          答え合わせ
+        </button>
       </div>
 
-      <div id="correct-answer" style="
-        margin-top:12px;
-        color:red;
-        font-size:20px;
-        font-weight:bold;
-      "></div>
+      <div id="correct-answer"
+        style="margin-top:12px; color:red; font-size:20px; font-weight:bold;"></div>
 
-      <div id="popup-judge" style="
-        position:absolute;
-        top:50%;
-        left:50%;
-        transform:translate(-50%, -50%);
-        font-size:120px;
-        font-weight:bold;
-        display:none;
-        pointer-events:none;
-        z-index:999;
-      "></div>
+      <div id="popup-judge"
+        style="
+          position:absolute;
+          top:50%; left:50%;
+          transform:translate(-50%, -50%);
+          font-size:120px;
+          font-weight:bold;
+          display:none;
+          pointer-events:none;
+          z-index:999;">
+      </div>
     </div>
   `;
 
   document.getElementById("ichimon-next").onclick = checkIchimonAnswer;
 }
 
+// ======================================================
+// 答え合わせ（別解対応済み）
+// ======================================================
 function checkIchimonAnswer() {
   const test = currentIchimonTest;
   const q = test.questions[test.index];
 
   let isAllCorrect = true;
-  q.answers.forEach((ans, i) => {
+  const userAnsList = [];
+
+  q.answers.forEach((ansObj, i) => {
     const val = document.getElementById(`ichimon-answer-${i}`).value.trim();
-    if (val !== ans) isAllCorrect = false;
+    userAnsList.push(val);
+
+    // ansObjが文字列かオブジェクトか判定
+    let validAnswers = [];
+    if (typeof ansObj === "string") {
+      validAnswers = [ansObj];
+    } else {
+      validAnswers = [ansObj.main, ...(Array.isArray(ansObj.alternatives) ? ansObj.alternatives : [])];
+    }
+
+    const matched = validAnswers.some(a => a.toLowerCase() === val.toLowerCase());
+    if (!matched) isAllCorrect = false;
   });
 
-  renderIchimonJudge(q, isAllCorrect);
+  // ユーザー解答を保存（文字列化して表示用に加工）
+  const correctAnswerText = q.answers.map(ansObj => {
+    if (typeof ansObj === "string") return ansObj;
+    const alts = Array.isArray(ansObj.alternatives) ? ansObj.alternatives : [];
+    return ansObj.main + (alts.length ? " (" + alts.join(", ") + ")" : "");
+  });
+
+  test.userAnswers[test.index] = {
+    yourAnswer: userAnsList,
+    correctAnswer: correctAnswerText,
+    isCorrect: isAllCorrect,
+    score: isAllCorrect ? (q.score || 0) : 0
+  };
+
+  renderIchimonJudge();
   document.getElementById("ichimon-next").style.display = "none";
 }
 
-function renderIchimonJudge(q, isCorrect) {
+// ======================================================
+// ○×表示 + 次へ
+// ======================================================
+function renderIchimonJudge() {
+  const test = currentIchimonTest;
+  const ua = test.userAnswers[test.index];
   const popup = document.getElementById("popup-judge");
   const correctArea = document.getElementById("correct-answer");
 
-  // 〇×をカード中央に大きく表示
-  popup.innerText = isCorrect ? "⭕" : "❌";
-  popup.style.color = isCorrect ? "green" : "red";
+  // 〇×を中央に表示
+  popup.innerText = ua.isCorrect ? "⭕" : "❌";
+  popup.style.color = ua.isCorrect ? "green" : "red";
   popup.style.display = "block";
   popup.style.opacity = "1";
   popup.style.transition = "opacity 0.5s ease-out";
 
-  setTimeout(() => { popup.style.opacity = "0"; setTimeout(() => popup.style.display = "none", 500); }, 1000);
+  setTimeout(() => {
+    popup.style.opacity = "0";
+    setTimeout(() => popup.style.display = "none", 500);
+  }, 1000);
 
-  // 正しい答えを解答欄下に表示
-  correctArea.innerText = "正しい答え: " + q.answers.join(" / ");
+  // 正答表示
+  correctArea.innerText = "正しい答え: " + ua.correctAnswer.join(" / ");
 
-  if (isCorrect) currentIchimonTest.correct++;
+  if (ua.isCorrect) test.correct++;
 
   // 次へボタン
   let nextBtn = document.getElementById("next-btn");
@@ -2282,52 +2436,133 @@ function renderIchimonJudge(q, isCorrect) {
     nextBtn.id = "next-btn";
     nextBtn.innerText = "次へ";
     Object.assign(nextBtn.style, {
-      marginTop:"16px", padding:"10px 28px", fontSize:"16px", borderRadius:"12px", cursor:"pointer", display:"block"
+      marginTop: "16px",
+      padding: "10px 28px",
+      fontSize: "16px",
+      borderRadius: "12px",
+      cursor: "pointer",
+      display: "block"
     });
     document.querySelector(".card").appendChild(nextBtn);
   }
 
   nextBtn.onclick = () => {
-    currentIchimonTest.index++;
-    if (currentIchimonTest.index >= currentIchimonTest.questions.length) renderIchimonResult();
-    else renderIchimonTestQuestion();
+    test.index++;
+    if (test.index >= test.questions.length) {
+      renderIchimonResult();
+    } else {
+      renderIchimonTestQuestion();
+    }
   };
 }
 
+// ======================================================
+// 結果画面
+// ======================================================
 function renderIchimonResult() {
   const area = document.getElementById("content");
   const test = currentIchimonTest;
 
+  const totalScore = test.userAnswers.reduce((s, a) => s + (a?.score || 0), 0);
+
   area.innerHTML = `
     <div class="card" style="padding:32px; border:none; box-shadow:none; text-align:center;">
       <h2>結果</h2>
+
       <div style="font-size:24px; margin-top:20px;">
-        ${test.correct} / ${test.questions.length}
+        正解数：${test.correct} / ${test.questions.length}
       </div>
 
-      <button id="ichimon-restart" 
-        class="btn-primary" 
-        style="margin-top:20px; padding:14px 36px; font-size:18px; border-radius:12px;">
-        もう一度
-      </button>
+      <div style="font-size:24px; margin-top:12px; color:#333;">
+        スコア：${totalScore}
+      </div>
 
-      <button id="ichimon-home" 
-        class="btn-primary" 
-        style="margin-top:12px; padding:14px 36px; font-size:18px; border-radius:12px;">
-        ホームに戻る
-      </button>
+      <div style="display:flex; gap:16px; justify-content:center; margin-top:24px; flex-wrap:wrap;">
+        <button id="ichimon-detail" class="btn-primary"
+          style="padding:14px 36px; font-size:18px; border-radius:12px;">
+          くわしく見る
+        </button>
+
+        <button id="ichimon-restart" class="btn-primary"
+          style="padding:14px 36px; font-size:18px; border-radius:12px;">
+          もう一度
+        </button>
+
+        <button id="ichimon-home" class="btn-primary"
+          style="padding:14px 36px; font-size:18px; border-radius:12px;">
+          ホームに戻る
+        </button>
+      </div>
     </div>
   `;
 
-  // 
+  document.getElementById("ichimon-detail").addEventListener("click", renderIchimonDetail);
   document.getElementById("ichimon-restart").addEventListener("click", () => {
     renderIchimonTrainingSetup();
   });
-
   document.getElementById("ichimon-home").addEventListener("click", () => {
     renderHome();
   });
 }
+
+// ======================================================
+// くわしく見る画面
+// ======================================================
+function renderIchimonDetail() {
+  const area = document.getElementById("content");
+  const test = currentIchimonTest;
+
+  let cards = "";
+
+  test.questions.forEach((q, i) => {
+    const ua = test.userAnswers[i];
+    const bg = ua.isCorrect ? "#d8f5d0" : "#f8d0d0";
+
+    cards += `
+      <div class="card" style="padding:20px; margin-bottom:16px; background:${bg}; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+        <h3 style="margin-bottom:12px;">第 ${i + 1} 問</h3>
+
+        <div style="margin-bottom:12px; padding:8px; background:#ffffff; border-radius:8px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1); white-space: pre-wrap;">
+          <b>問題：</b><br>
+          <span style="font-size:16px; line-height:1.5;">${q.question}</span>
+        </div>
+
+        <div style="margin-bottom:8px; padding:8px; background:#f0f8ff; border-radius:8px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1); white-space: pre-wrap;">
+          <b>あなたの解答：</b><br>
+          <span style="font-size:16px; line-height:1.5;">${ua.yourAnswer.join(" / ")}</span>
+        </div>
+
+        <div style="margin-bottom:8px; padding:8px; background:#fff8f8; border-radius:8px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1); white-space: pre-wrap;">
+          <b>正解：</b><br>
+          <span style="font-size:16px; line-height:1.5;">${ua.correctAnswer.join(" / ")}</span>
+        </div>
+
+        <div style="margin-top:8px; font-weight:bold;">
+          スコア：${ua.score} 点
+        </div>
+      </div>
+    `;
+  });
+
+  area.innerHTML = `
+    <div class="card" style="padding:32px;">
+      <h2>くわしく見る</h2>
+      <div style="margin-top:20px;">
+        ${cards}
+      </div>
+
+      <div style="margin-top:24px; display:flex; justify-content:center;">
+        <button id="detail-back" class="btn-primary"
+          style="padding:14px 36px; font-size:18px; border-radius:12px;">
+          結果に戻る
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("detail-back").addEventListener("click", renderIchimonResult);
+}
+
 
 
 
@@ -2719,7 +2954,14 @@ const wordtestBtn = document.getElementById('start-wordtest');
 if (wordtestBtn) wordtestBtn.addEventListener('click', renderWordTestMenu);
 
 
-// 社会テスト系：一問一答
+// 社会テスト系：
+const nenBtn = document.getElementById('start-nen');
+if (nenBtn) {
+    nenBtn.addEventListener('click', () => {
+        renderNenSetup();
+    });
+}
+
 const ichimonBtn = document.getElementById('start-ichimon');
 if (ichimonBtn) {
     ichimonBtn.addEventListener('click', () => {
@@ -2728,6 +2970,261 @@ if (ichimonBtn) {
 }
 }
 
+
+//// ---------------------------
+// 年号テスト範囲設定画面
+// ---------------------------
+function renderNenSetup() {
+    const content = document.getElementById('content'); // メインコンテンツ領域
+    content.innerHTML = `
+        <div class="card" style="max-width:600px; margin:50px auto; padding:32px; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:16px;">
+            <h2 style="margin-bottom:24px; font-size:1.8em; color:#333;">年号テスト 範囲設定</h2>
+            
+            <div style="display:flex; justify-content:center; align-items:center; gap:12px; margin-bottom:32px; font-size:1.2em;">
+                <label></label>
+                <input type="number" id="nen-start" placeholder="" style="width:140px; padding:14px; border-radius:10px; border:1px solid #ccc; text-align:center; font-size:1.2em;">
+                <span>～</span>
+                <input type="number" id="nen-end" placeholder="" style="width:140px; padding:14px; border-radius:10px; border:1px solid #ccc; text-align:center; font-size:1.2em;">
+            </div>
+
+            <div style="margin-bottom:32px;">
+                <label style="display:block; margin-bottom:12px; font-weight:600;">問題数を選択：</label>
+                <button class="btn-num" data-num="10" style="background-color:white; color:#333; padding:16px 32px; border-radius:12px; border:2px solid #ccc; margin-right:12px; font-size:1.2em; cursor:pointer;">10問</button>
+                <button class="btn-num" data-num="20" style="background-color:white; color:#333; padding:16px 32px; border-radius:12px; border:2px solid #ccc; margin-right:12px; font-size:1.2em; cursor:pointer;">20問</button>
+                <button class="btn-num" data-num="30" style="background-color:white; color:#333; padding:16px 32px; border-radius:12px; border:2px solid #ccc; font-size:1.2em; cursor:pointer;">30問</button>
+            </div>
+
+            <div style="display:flex; justify-content:center; gap:16px;">
+                <button id="start-nen-test" style="
+                    background-color:#fff4b8; 
+                    color:#333; 
+                    font-size:1.2em; 
+                    padding:12px 32px; 
+                    border:none; 
+                    border-radius:12px; 
+                    cursor:pointer;
+                    transition:0.2s;
+                ">
+                    はじめる
+                </button>
+
+                <button id="back-to-main" style="
+                    background-color:#e0e0e0;
+                    color:#333;
+                    font-size:1.2em;
+                    padding:12px 32px;
+                    border:none;
+                    border-radius:12px;
+                    cursor:pointer;
+                    transition:0.2s;
+                ">
+                    戻る
+                </button>
+            </div>
+        </div>
+    `;
+
+    let selectedNum = 10; // デフォルト10問
+
+    // 問題数選択ボタン
+    const numButtons = document.querySelectorAll('.btn-num');
+    numButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            selectedNum = parseInt(e.currentTarget.dataset.num);
+            numButtons.forEach(b => {
+                b.style.backgroundColor = 'white';
+                b.style.border = '2px solid #ccc';
+            });
+            e.currentTarget.style.backgroundColor = '#fff4b8';
+            e.currentTarget.style.border = '2px solid #f5c000';
+        });
+    });
+
+    // 「はじめる」ボタン
+    document.getElementById('start-nen-test').addEventListener('click', () => {
+        const start = parseInt(document.getElementById('nen-start').value);
+        const end = parseInt(document.getElementById('nen-end').value);
+
+        if (isNaN(start) || isNaN(end)) {
+            alert('範囲の開始と終了を正しく入力してください。');
+            return;
+        }
+        if (start > end) {
+            alert('開始は終了より小さい値にしてください。');
+            return;
+        }
+
+        startNenTest(start, end, selectedNum);
+    });
+
+    // 「戻る」ボタン
+    document.getElementById('back-to-main').addEventListener('click', () => {
+        renderTestMenu(); // 元のテストメニューに戻す
+    });
+}
+
+// ---------------------------
+// 年号テスト開始関数
+// ---------------------------
+async function startNenTest(start, end, numQuestions) {
+    const content = document.getElementById('content');
+
+    try {
+        const qSnap = await getDocs(collection(db, 'social_year_questions'));
+        let docs = qSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // 範囲でフィルタ
+        let filtered = docs.filter(d => {
+            const y = parseInt(d.year, 10);
+            return !isNaN(y) && y >= start && y <= end;
+        });
+
+        if (filtered.length === 0) {
+            content.innerHTML = `<div class="card" style="text-align:center; padding:32px;">
+                範囲内に出題可能な問題がありません。範囲を変更してください。
+            </div>`;
+            return;
+        }
+
+        filtered = shuffleArrayForNen(filtered).slice(0, numQuestions);
+        const answers = [];
+        let currentIndex = 0;
+        let showingAnswer = false;
+
+        function renderQuestion() {
+            const q = filtered[currentIndex];
+            content.innerHTML = `
+                <div class="card" style="max-width:700px; margin:50px auto; padding:32px; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:16px; position:relative;">
+                    <h3 style="margin-bottom:24px; font-size:1.3em;">問題 ${currentIndex + 1} / ${filtered.length}</h3>
+                    <div style="font-size:1.6em; margin-bottom:32px; line-height:1.6;">${escHtml(q.question)}</div>
+                    <input type="number" id="user-answer" placeholder="" 
+                        style="width:200px; padding:16px; border-radius:8px; border:1px solid #ccc; text-align:center; font-size:1.4em;">
+                    <div id="correct-answer" style="margin-top:32px; font-size:1.4em; color:red;"></div>
+                    <div style="margin-top:32px;">
+                        <button id="next-btn" style="
+                            background-color:#fff4b8; 
+                            color:#333; 
+                            font-size:1.4em; 
+                            padding:12px 32px; 
+                            border:none; 
+                            border-radius:12px; 
+                            cursor:pointer;
+                        ">次へ</button>
+                    </div>
+                </div>
+
+                <!-- ○×ポップアップ -->
+                <div id="popup-feedback" style="
+                    display:none;
+                    position:fixed;
+                    top:50%;
+                    left:50%;
+                    transform:translate(-50%, -50%);
+                    font-size:8em;
+                    font-weight:bold;
+                    pointer-events:none;
+                    opacity:0;
+                    transition: opacity 0.3s ease;
+                "></div>
+            `;
+        }
+
+        function showPopup(correct) {
+            const popup = document.getElementById('popup-feedback');
+            popup.textContent = correct ? '○' : '×';
+            popup.style.color = correct ? 'green' : 'red';
+            popup.style.display = 'block';
+            popup.style.opacity = '1';
+
+            setTimeout(() => {
+                popup.style.opacity = '0';
+            }, 800);
+        }
+
+        function handleNext() {
+            const q = filtered[currentIndex];
+            const userInput = document.getElementById('user-answer').value.trim();
+
+            if (!showingAnswer) {
+                answers.push(userInput);
+                showingAnswer = true;
+
+                const correct = String(q.year);
+                const isCorrect = userInput === correct;
+
+                showPopup(isCorrect);
+                document.getElementById('correct-answer').textContent = `${correct}`;
+                document.getElementById('user-answer').disabled = true;
+            } else {
+                showingAnswer = false;
+                currentIndex++;
+                if (currentIndex < filtered.length) {
+                    renderQuestion();
+                } else {
+                    renderResult();
+                }
+            }
+        }
+
+        function renderResult() {
+            let score = 0;
+            let resultHTML = `<div class="card" style="max-width:700px; margin:50px auto; padding:32px; box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:16px;">
+                <h2 style="margin-bottom:24px;">結果</h2>
+                <div style="display:flex; flex-direction:column; gap:12px;">`;
+
+            filtered.forEach((q, idx) => {
+                const userAns = answers[idx];
+                const correct = String(q.year);
+                const isCorrect = userAns === correct;
+                if (isCorrect) score++;
+                resultHTML += `
+                    <div style="padding:12px; border-radius:8px; background:${isCorrect ? '#d4f8d4' : '#f8d4d4'};">
+                        <div style="font-weight:700;">問題: ${escHtml(q.question)}</div>
+                        <div>あなたの答え: ${escHtml(userAns || '-')} / 正解: ${escHtml(correct)}</div>
+                    </div>
+                `;
+            });
+
+            resultHTML += `
+                </div>
+                <h3 style="margin-top:24px;">合計得点: ${score} / ${filtered.length}</h3>
+                <button id="back-to-setup" style="
+                    margin-top:24px; background-color:#e0e0e0; padding:12px 32px; border:none; border-radius:12px; cursor:pointer;
+                ">範囲設定に戻る</button>
+            </div>`;
+
+            content.innerHTML = resultHTML;
+
+            document.getElementById('back-to-setup').addEventListener('click', () => {
+                renderNenSetup();
+            });
+        }
+
+        renderQuestion();
+
+        content.addEventListener('click', (e) => {
+            if (e.target && e.target.id === 'next-btn') {
+                handleNext();
+            }
+        });
+
+    } catch (err) {
+        console.error(err);
+        content.innerHTML = `<div class="card" style="text-align:center; padding:32px; color:#c00;">
+            問題の読み込みに失敗しました: ${escHtml(err.message || err)}
+        </div>`;
+    }
+}
+
+// シャッフル関数
+function shuffleArrayForNen(arr) {
+    const a = [...arr];
+    for (let i = a.length -1; i>0; i--) {
+        const j = Math.floor(Math.random() * (i+1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
 
 
 
@@ -6144,14 +6641,5 @@ window.addEventListener("beforeunload", function (event) {
 });
 
   </script>
-
-
 </body>
 </html>
-
-
-
-
-
-
-
