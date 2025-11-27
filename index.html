@@ -1397,7 +1397,6 @@ answersTemp.reading = {};
 // ================================
 // 🧭 結果詳細
 // ================================
-/* === モダンボタンCSSを追加 === */
 const style = document.createElement("style");
 style.textContent = `
   .modern-btn {
@@ -1564,18 +1563,8 @@ async function submitActivity(activityId, activity) {
 
 
 
-
-
-
-
-
-
-
-
-
 /* ===========================
    社会：問題管理（年号テスト）機能
-   ※ このブロックをあなたの module スクリプト内（db / currentUser が使える場所）に丸ごと貼ってください
    =========================== */
 
 // --- ヘルパ: エスケープ（表示用） ---
@@ -1819,7 +1808,7 @@ async function loadAndShowYearQuestions(keyword = '') {
 
 
 // ==========================
-// 一問一答：問題作成フォーム（別解対応版）
+// 一問一答：問題作成フォーム
 function renderIchimonCreateForm(editData) {
   const area = document.getElementById("social-admin-area");
 
@@ -2393,12 +2382,12 @@ function checkIchimonAnswer() {
   });
 
   test.userAnswers[test.index] = {
-    yourAnswer: userAnsList,
-    correctAnswer: correctAnswerText,
-    isCorrect: isAllCorrect,
-    score: isAllCorrect ? (q.score || 0) : 0
-  };
-
+  question: q.question,           // ← 追加：問題文
+  userAnswer: userAnsList,        // ← yourAnswer → userAnswer に変更
+  correctAnswer: correctAnswerText,
+  isCorrect: isAllCorrect,
+  score: isAllCorrect ? (q.score || 0) : 0
+};
   renderIchimonJudge();
   document.getElementById("ichimon-next").style.display = "none";
 }
@@ -2457,11 +2446,46 @@ function renderIchimonJudge() {
 }
 
 // ======================================================
+// ============================================
+// Firestore に一問一答結果を保存する関数
+// ============================================
+async function saveIchimonResult(test) {
+  try {
+    const uid = currentUser ? currentUser.id : 'guest';
+
+    const answersRecord = test.userAnswers.map(a => ({
+      question: a.question || "",
+      userAnswer: a.userAnswer || "",
+      correctAnswer: a.correctAnswer || "",
+      score: a.score || 0
+    }));
+
+    await addDoc(collection(db, "results"), {
+      uid,
+      type: "一問一答",
+      testType: "soichimon",
+      score: test.correct,
+      totalScore: test.userAnswers.reduce((s, a) => s + (a?.score || 0), 0),
+      totalQuestions: test.questions.length,
+      answers: answersRecord,
+      createdAt: new Date()
+    });
+
+    console.log("🔥 一問一答結果を Firestore に保存しました");
+  } catch (err) {
+    console.error("saveIchimonResult error", err);
+  }
+}
+
+// ============================================
 // 結果画面
-// ======================================================
+// ============================================
 function renderIchimonResult() {
   const area = document.getElementById("content");
   const test = currentIchimonTest;
+
+  // 結果を Firestore に保存
+  saveIchimonResult(test);
 
   const totalScore = test.userAnswers.reduce((s, a) => s + (a?.score || 0), 0);
 
@@ -2496,6 +2520,19 @@ function renderIchimonResult() {
     </div>
   `;
 
+  // BNP 加算
+  try {
+    if (typeof addBnp === 'function') {
+      addBnp(totalScore);
+      console.log("BNP にスコアを加算しました:", totalScore);
+    } else {
+      console.warn("addBnpが見つかりません");
+    }
+  } catch (e) {
+    console.warn("BNPエラー:", e);
+  }
+
+  // ボタンイベント
   document.getElementById("ichimon-detail").addEventListener("click", renderIchimonDetail);
   document.getElementById("ichimon-restart").addEventListener("click", () => {
     renderIchimonTrainingSetup();
@@ -2505,9 +2542,9 @@ function renderIchimonResult() {
   });
 }
 
-// ======================================================
+// ============================================
 // くわしく見る画面
-// ======================================================
+// ============================================
 function renderIchimonDetail() {
   const area = document.getElementById("content");
   const test = currentIchimonTest;
@@ -2529,7 +2566,7 @@ function renderIchimonDetail() {
 
         <div style="margin-bottom:8px; padding:8px; background:#f0f8ff; border-radius:8px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1); white-space: pre-wrap;">
           <b>あなたの解答：</b><br>
-          <span style="font-size:16px; line-height:1.5;">${ua.yourAnswer.join(" / ")}</span>
+          <span style="font-size:16px; line-height:1.5;">${ua.userAnswer.join(" / ")}</span>
         </div>
 
         <div style="margin-bottom:8px; padding:8px; background:#fff8f8; border-radius:8px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1); white-space: pre-wrap;">
@@ -3064,8 +3101,8 @@ function renderNenSetup() {
 }
 
 // ---------------------------
-// 年号テスト開始関数
-// ---------------------------
+// 年号テスト開始関数（完全版・shuffle 定義含む）
+// -------------------------------------
 async function startNenTest(start, end, numQuestions) {
     const content = document.getElementById('content');
 
@@ -3073,7 +3110,7 @@ async function startNenTest(start, end, numQuestions) {
         const qSnap = await getDocs(collection(db, 'social_year_questions'));
         let docs = qSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // 範囲でフィルタ
+        // 範囲フィルタ
         let filtered = docs.filter(d => {
             const y = parseInt(d.year, 10);
             return !isNaN(y) && y >= start && y <= end;
@@ -3086,22 +3123,39 @@ async function startNenTest(start, end, numQuestions) {
             return;
         }
 
+        // シャッフルして出題数だけ切り取り
         filtered = shuffleArrayForNen(filtered).slice(0, numQuestions);
+
         const answers = [];
         let currentIndex = 0;
         let showingAnswer = false;
 
+        // -------------------------------------
+        // 問題画面描画
+        // -------------------------------------
         function renderQuestion() {
             const q = filtered[currentIndex];
+
             content.innerHTML = `
-                <div class="card" style="max-width:700px; margin:50px auto; padding:32px; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:16px; position:relative;">
-                    <h3 style="margin-bottom:24px; font-size:1.3em;">問題 ${currentIndex + 1} / ${filtered.length}</h3>
-                    <div style="font-size:1.6em; margin-bottom:32px; line-height:1.6;">${escHtml(q.question)}</div>
-                    <input type="number" id="user-answer" placeholder="" 
-                        style="width:200px; padding:16px; border-radius:8px; border:1px solid #ccc; text-align:center; font-size:1.4em;">
+                <div class="card" style="max-width:700px; margin:50px auto; padding:32px; text-align:center; 
+                     box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:16px; position:relative;">
+
+                    <h3 style="margin-bottom:24px; font-size:1.3em;">
+                        問題 ${currentIndex + 1} / ${filtered.length}
+                    </h3>
+
+                    <div style="font-size:1.6em; margin-bottom:32px; line-height:1.6;">
+                        ${escHtml(q.question)}
+                    </div>
+
+                    <input type="number" id="user-answer"
+                        style="width:200px; padding:16px; border-radius:8px; border:1px solid #ccc; 
+                        text-align:center; font-size:1.4em;">
+
                     <div id="correct-answer" style="margin-top:32px; font-size:1.4em; color:red;"></div>
+
                     <div style="margin-top:32px;">
-                        <button id="next-btn" style="
+                        <button id="next-btn" onclick="handleNext()" style="
                             background-color:#fff4b8; 
                             color:#333; 
                             font-size:1.4em; 
@@ -3129,21 +3183,34 @@ async function startNenTest(start, end, numQuestions) {
             `;
         }
 
+        // -------------------------------------
+        // ○×ポップアップ表示
+        // -------------------------------------
         function showPopup(correct) {
             const popup = document.getElementById('popup-feedback');
-            popup.textContent = correct ? '○' : '×';
-            popup.style.color = correct ? 'green' : 'red';
-            popup.style.display = 'block';
-            popup.style.opacity = '1';
+            if (!popup) return;
+            popup.textContent = correct ? "○" : "×";
+            popup.style.color = correct ? "green" : "red";
+            popup.style.display = "block";
+            popup.style.opacity = "1";
 
             setTimeout(() => {
-                popup.style.opacity = '0';
+                popup.style.opacity = "0";
             }, 800);
         }
 
-        function handleNext() {
+        // -------------------------------------
+        // 次へボタン処理（onclickで直接呼ぶ）
+        // -------------------------------------
+        // window にぶら下げてグローバル呼び出し可能にする
+        window.handleNext = function () {
+            // guard: if content was replaced and elements missing, ignore
+            const ansInput = document.getElementById('user-answer');
+            const correctEl = document.getElementById('correct-answer');
+            if (!ansInput || !correctEl) return;
+
             const q = filtered[currentIndex];
-            const userInput = document.getElementById('user-answer').value.trim();
+            const userInput = ansInput.value.trim();
 
             if (!showingAnswer) {
                 answers.push(userInput);
@@ -3153,30 +3220,40 @@ async function startNenTest(start, end, numQuestions) {
                 const isCorrect = userInput === correct;
 
                 showPopup(isCorrect);
-                document.getElementById('correct-answer').textContent = `${correct}`;
-                document.getElementById('user-answer').disabled = true;
+
+                correctEl.textContent = correct;
+                ansInput.disabled = true;
             } else {
                 showingAnswer = false;
                 currentIndex++;
+
                 if (currentIndex < filtered.length) {
                     renderQuestion();
                 } else {
                     renderResult();
                 }
             }
-        }
+        };
 
+        // -------------------------------------
+        // 結果画面
+        // -------------------------------------
         function renderResult() {
             let score = 0;
-            let resultHTML = `<div class="card" style="max-width:700px; margin:50px auto; padding:32px; box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:16px;">
+            let resultHTML = `
+                <div class="card" style="max-width:700px; margin:50px auto; padding:32px; 
+                    box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:16px;">
                 <h2 style="margin-bottom:24px;">結果</h2>
-                <div style="display:flex; flex-direction:column; gap:12px;">`;
+                <div style="display:flex; flex-direction:column; gap:12px;">
+            `;
 
             filtered.forEach((q, idx) => {
                 const userAns = answers[idx];
                 const correct = String(q.year);
                 const isCorrect = userAns === correct;
+
                 if (isCorrect) score++;
+
                 resultHTML += `
                     <div style="padding:12px; border-radius:8px; background:${isCorrect ? '#d4f8d4' : '#f8d4d4'};">
                         <div style="font-weight:700;">問題: ${escHtml(q.question)}</div>
@@ -3185,28 +3262,38 @@ async function startNenTest(start, end, numQuestions) {
                 `;
             });
 
+ try {
+        if (typeof addBnp === 'function') {
+            addBnp(score);
+            console.log("BNPにスコアを加算:", score);
+        }
+    } catch(e) {
+        console.warn("BNP加算エラー", e);
+    }
+
             resultHTML += `
                 </div>
                 <h3 style="margin-top:24px;">合計得点: ${score} / ${filtered.length}</h3>
                 <button id="back-to-setup" style="
-                    margin-top:24px; background-color:#e0e0e0; padding:12px 32px; border:none; border-radius:12px; cursor:pointer;
-                ">範囲設定に戻る</button>
-            </div>`;
+                    margin-top:24px; background-color:#e0e0e0; padding:12px 32px; 
+                    border:none; border-radius:12px; cursor:pointer;">
+                    範囲設定に戻る
+                </button>
+            </div>
+            `;
 
             content.innerHTML = resultHTML;
 
-            document.getElementById('back-to-setup').addEventListener('click', () => {
-                renderNenSetup();
-            });
+            const backBtn = document.getElementById('back-to-setup');
+            if (backBtn) {
+                backBtn.addEventListener('click', () => {
+                    renderNenSetup();
+                });
+            }
         }
 
+        // 最初の問題を表示
         renderQuestion();
-
-        content.addEventListener('click', (e) => {
-            if (e.target && e.target.id === 'next-btn') {
-                handleNext();
-            }
-        });
 
     } catch (err) {
         console.error(err);
@@ -3216,25 +3303,17 @@ async function startNenTest(start, end, numQuestions) {
     }
 }
 
-// シャッフル関数
+// -------------------------------------
+// 配列をシャッフルするユーティリティ（このファイル内に必ず置いてください）
+// -------------------------------------
 function shuffleArrayForNen(arr) {
-    const a = [...arr];
-    for (let i = a.length -1; i>0; i--) {
-        const j = Math.floor(Math.random() * (i+1));
+    const a = Array.isArray(arr) ? [...arr] : [];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
         [a[i], a[j]] = [a[j], a[i]];
     }
     return a;
 }
-
-
-
-
-
-
-
-
-
-
 
 
 // ===== 単語テスト：モード・レベル・出題数選択画面 =====
@@ -4243,7 +4322,7 @@ function initBnpWatcher() {
 
   const userRef = doc(db, "users", currentUser.id);
 
-  // ユーザードキュメントをリアルタイム監視
+  // リアルタイム監視
   onSnapshot(userRef, (snap) => {
     if (!snap.exists()) return;
     const data = snap.data();
@@ -4255,49 +4334,80 @@ function initBnpWatcher() {
   });
 }
 
-// ===== 呼び出すタイミング =====
-// currentUser がセットされた直後に呼ぶ
+
+//
 if(currentUser && currentUser.id){
   initBnpWatcher();
 }
 
-// もしくはログイン処理後のコールバック内で
 // loginUser().then(user => { currentUser = user; initBnpWatcher(); });
 
     
-    // ---------- 過去の成績（テスト種別選択 + 履歴表示） ----------
-
-function renderHistory(){
-  // まず種別選択カードを表示
+function renderHistory() {
   document.getElementById('content').innerHTML = `
     <div class="card">
-      <h2>過去の成績</h2>
+      <h2 style="margin-bottom:12px;">過去の成績</h2>
       <p>閲覧したいテストの種類を選んでください。</p>
-      <div id="history-type-cards" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;">
-        <div class="card" style="flex:1;min-width:180px;cursor:pointer" data-type="速読力測定テスト">速読力測定テスト</div>
-        <div class="card" style="flex:1;min-width:180px;cursor:pointer" data-type="文法特訓">文法特訓</div>
-        <div class="card" style="flex:1;min-width:180px;cursor:pointer" data-type="単語テスト">単語テスト</div>
-        <div class="card" style="flex:1;min-width:180px;cursor:pointer;opacity:0.6">リスニング特訓（未実装）</div>
+
+      <!-- 英語 -->
+      <div class="card" style="border:2px solid #bbb; padding:16px 16px; margin-top:16px;">
+        <h3 style="margin:2px 0; font-size:32px; color:#f5b5c5; font-weight:900;">英語</h3>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:12px;">
+          <div class="small-card" style="
+            width:250px; height:76px; display:flex; align-items:center; justify-content:center;
+            text-align:center; border:2px solid #f5b5c5; border-radius:12px; cursor:pointer;
+            font-size:16px; font-weight:bold;"
+            data-type="速読力測定テスト">速読力測定テスト</div>
+          <div class="small-card" style="
+            width:250px; height:76px; display:flex; align-items:center; justify-content:center;
+            text-align:center; border:2px solid #f5b5c5; border-radius:12px; cursor:pointer;
+            font-size:16px; font-weight:bold;"
+            data-type="文法特訓">文法特訓</div>
+          <div class="small-card" style="
+            width:250px; height:76px; display:flex; align-items:center; justify-content:center;
+            text-align:center; border:2px solid #f5b5c5; border-radius:12px; cursor:pointer;
+            font-size:16px; font-weight:bold;"
+            data-type="単語テスト">単語テスト</div>
+          <div class="small-card" style="
+            width:250px; height:76px; display:flex; align-items:center; justify-content:center;
+            text-align:center; border:2px solid #f5b5c5; border-radius:12px; cursor:not-allowed; opacity:0.6;
+            font-size:16px; font-weight:bold;">
+            リスニング特訓（未実装）
+          </div>
+        </div>
       </div>
+
+      <!-- 社会 -->
+      <div class="card" style="border:2px solid #bbb; padding:16px 16px; margin-top:16px;">
+        <h3 style="margin:2px 0; font-size:32px; color:#f9e58a; font-weight:900;">社会</h3>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:12px;">
+          <div class="small-card" style="
+            width:250px; height:76px; display:flex; align-items:center; justify-content:center;
+            text-align:center; border:2px solid #f9e58a; border-radius:12px; cursor:pointer;
+            font-size:16px; font-weight:bold;"
+            data-type="一問一答">一問一答</div>
+        </div>
+      </div>
+
+      <!-- 選択したテスト結果表示エリア -->
       <div id="history-list" style="margin-top:16px;"></div>
     </div>
   `;
 
-  // 有効なカードだけクリックを有効化
-  const cardContainer = document.getElementById('history-type-cards');
-  if(!cardContainer) return;
-  const cards = cardContainer.querySelectorAll('div[data-type]');
-  cards.forEach(card => {
+  // 小カードのクリック処理
+  const cardContainer = document.querySelectorAll('.small-card');
+  cardContainer.forEach(card => {
     card.addEventListener('click', () => {
-      // 見た目の選択ハイライト
-      cards.forEach(c=> c.style.boxShadow = 'none');
+      cardContainer.forEach(c => c.style.boxShadow = 'none');
       card.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
-      // 読み込み
       const type = card.getAttribute('data-type');
       loadHistory(type);
     });
   });
 }
+
+
+
 
 // --- 回答オブジェクトを正規化するヘルパ ---
 function normalizeAnswer(a){
@@ -5617,12 +5727,10 @@ async function startGrammarTraining(){
   }
 }
 
-// 保存（結果を DB に追加し、バナポを加算）
-// 既存の saveGrammarResult と置き換えてください
+// 保存
 async function saveGrammarResult(score, elapsedSec, answersRecord){
   try{
     const uid = currentUser ? currentUser.id : 'guest';
-    // results ドキュメントに、互換性のために testType と type の両方を入れておく
     await addDoc(collection(db,'results'), {
       uid,
       type: '文法特訓',
@@ -6643,3 +6751,10 @@ window.addEventListener("beforeunload", function (event) {
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
