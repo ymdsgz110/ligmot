@@ -1563,6 +1563,15 @@ async function submitActivity(activityId, activity) {
 
 
 
+
+
+
+
+
+
+
+
+
 /* ===========================
    社会：問題管理（年号テスト）機能
    =========================== */
@@ -3316,6 +3325,16 @@ function shuffleArrayForNen(arr) {
 }
 
 
+
+
+
+
+
+
+
+
+
+
 // ===== 単語テスト：モード・レベル・出題数選択画面 =====
 function renderWordTestMenu(defaultMode = 'en-ja') {
   document.getElementById('content').innerHTML = `
@@ -4349,7 +4368,7 @@ function renderHistory() {
       <h2 style="margin-bottom:12px;">過去の成績</h2>
       <p>閲覧したいテストの種類を選んでください。</p>
 
-      <!-- 英語 -->
+      <!-- 英語の大きなカード -->
       <div class="card" style="border:2px solid #bbb; padding:16px 16px; margin-top:16px;">
         <h3 style="margin:2px 0; font-size:32px; color:#f5b5c5; font-weight:900;">英語</h3>
         <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:12px;">
@@ -4377,7 +4396,7 @@ function renderHistory() {
         </div>
       </div>
 
-      <!-- 社会 -->
+      <!-- 社会の大きなカード -->
       <div class="card" style="border:2px solid #bbb; padding:16px 16px; margin-top:16px;">
         <h3 style="margin:2px 0; font-size:32px; color:#f9e58a; font-weight:900;">社会</h3>
         <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:12px;">
@@ -6749,6 +6768,8 @@ window.addEventListener("beforeunload", function (event) {
 });
 
   </script>
+
+
 </body>
 </html>
 
