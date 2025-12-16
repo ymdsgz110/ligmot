@@ -2259,11 +2259,18 @@ const subjectClassesMap = {
   civics: ["現代社会","日本国憲法","立法・行政・司法","地方自治","家計と企業","金融と経済","社会福祉"]
 };
 
+// ★ 総問題数
+const TOTAL_QUESTION_COUNT = {
+  geography: 345,
+  history: 25,
+  civics: 0
+};
+
 function getSubjectByClass(cls) {
   for (const subject in subjectClassesMap) {
     if (subjectClassesMap[subject].includes(cls)) return subject;
   }
-  return null; //
+  return null;
 }
 
 // ================================
@@ -2276,26 +2283,34 @@ async function renderMasteryBars() {
 
   barArea.innerHTML = "";
 
-  const qSnap = await getDocs(collection(db, "ichimon_questions"));
+  // 進捗
   const pSnap = await getDocs(query(
     collection(db, "ichimon_progress"),
     where("uid", "==", uid)
   ));
 
-  const progressMap = new Map();
-  pSnap.forEach(d => progressMap.set(d.data().questionId, d.data()));
+  // subject別に mastered 数を集計
+  const masteredCount = {
+    geography: 0,
+    history: 0,
+    civics: 0
+  };
+
+  pSnap.forEach(d => {
+    const data = d.data();
+    if (data.mastered && masteredCount[data.subject] !== undefined) {
+      masteredCount[data.subject]++;
+    }
+  });
 
   for (const subject of ["geography","history","civics"]) {
-    const questions = qSnap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .filter(q => subjectClassesMap[subject].includes(q.class));
-
-    const total = questions.length;
-    const mastered = questions.filter(q => progressMap.get(q.id)?.mastered).length;
+    const total = TOTAL_QUESTION_COUNT[subject];
+    const mastered = masteredCount[subject];
     const rate = total === 0 ? 0 : Math.round((mastered / total) * 100);
 
-    const label = subject === "geography" ? "地理"
-                : subject === "history" ? "歴史" : "公民";
+    const label =
+      subject === "geography" ? "地理" :
+      subject === "history" ? "歴史" : "公民";
 
     barArea.innerHTML += `
       <div style="margin-bottom:12px;text-align:left;">
@@ -6871,4 +6886,10 @@ window.addEventListener("beforeunload", function (event) {
 
 </body>
 </html>
+
+
+
+
+
+
 
