@@ -563,7 +563,7 @@ function renderCreateActivity() {
         <button id="btn-save-activity" class="btn-plain btn-primary" style="padding:12px 24px; border-radius:8px; font-size:16px;">アクティビティを保存</button>
     `;
 
-    // 公開対象ラジオ切替
+    // 公開対象ラジオ
     const radios = document.querySelectorAll('#publish-container input[name="publishOption"]');
     const customList = document.getElementById('custom-user-list');
     radios.forEach(radio => {
@@ -572,7 +572,7 @@ function renderCreateActivity() {
         });
     });
 
-    // ===== Vocabulary問題追加 =====
+    // ===== Voca追加 =====
     document.getElementById('btn-add-vocab').addEventListener('click', () => {
         const container = document.getElementById('vocab-questions');
         const index = container.children.length + 1;
@@ -604,7 +604,7 @@ function renderCreateActivity() {
         container.appendChild(div);
     });
 
-    // ===== Grammar問題追加 =====
+    // ===== Gra追加 =====
     document.getElementById('btn-add-grammar').addEventListener('click', () => {
         const container = document.getElementById('grammar-questions');
         const index = container.children.length + 1;
@@ -2262,7 +2262,7 @@ const subjectClassesMap = {
 // ★ 総問題数
 const TOTAL_QUESTION_COUNT = {
   geography: 471,
-  history: 413,
+  history: 609,
   civics: 0
 };
 
@@ -2369,8 +2369,8 @@ let currentIchimonTest = null;
 async function loadIchimonQuestions(selectedRanges, selectedLevel, limitCount) {
   let allowedLevels = [];
   if (selectedLevel === "A") allowedLevels = ["A"];
-  if (selectedLevel === "B") allowedLevels = ["A", "B"];
-  if (selectedLevel === "C") allowedLevels = ["A", "B", "C"];
+  if (selectedLevel === "B") allowedLevels = ["B"];
+  if (selectedLevel === "C") allowedLevels = ["C"];
 
   const q = query(
     collection(db, "ichimon_questions"),
@@ -6886,8 +6886,6 @@ window.addEventListener("beforeunload", function (event) {
 
 </body>
 </html>
-
-
 
 
 
