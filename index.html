@@ -2100,7 +2100,432 @@ function renderIchimonTrainingSetup() {
   const area = document.getElementById("content");
 
   const levels = ["A", "B", "C"];
-  const counts = [10, 20, 30];✕";
+  const counts = [10, 20, 30];
+
+  const subjectRanges = {
+    geography: ["世界地図","日本地理","世界の気候","アジア・オセアニア","ヨーロッパ","アフリカ","北南米"],
+    history: ["原始","古代","中世","近世","近代","現代"],
+    civics: ["現代社会","日本国憲法","民主政治","立法・行政・司法","地方自治","家計と企業","金融と経済","社会福祉","国際社会"]
+  };
+
+  area.innerHTML = `
+  <div class="card" style="max-width:900px;margin:40px auto;padding:32px;text-align:center;">
+    <h2 style="margin-bottom:32px;">一問一答 特訓範囲・レベル設定</h2>
+    <div id="mastery-bars" style="margin-bottom:24px;"></div>
+
+
+    <div style="display:flex; align-items:center; justify-content:flex-start; gap:12px; margin-bottom:24px;">
+      <h3 style="margin:0;">出題範囲を選択してください</h3>
+      <select id="subject-select" style="
+        padding:8px 12px; 
+        border-radius:12px; 
+        border:2px solid #ccc; 
+        font-size:16px; 
+        cursor:pointer;
+      ">
+        <option value="geography" selected>地理</option>
+        <option value="history">歴史</option>
+        <option value="civics">公民</option>
+      </select>
+    </div>
+
+    <div id="range-selection" style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin:24px 0;"></div>
+
+    <h3 style="text-align:left;">レベルを選択してください</h3>
+    <div id="level-selection" style="display:flex;gap:16px;justify-content:center;margin:24px 0;"></div>
+
+    <h3 style="text-align:left;">出題数を選択してください</h3>
+    <div id="count-selection" style="display:flex;gap:16px;justify-content:center;margin:24px 0;"></div>
+
+    <div style="margin-top:32px;">
+      <button id="start-ichimon-test" class="btn-plain btn-primary" style="padding:12px 28px;font-size:18px;">テストを開始する</button>
+      <button id="ichimon-back" class="btn-plain" style="padding:12px 28px;font-size:18px;">戻る</button>
+    </div>
+  </div>
+  `;
+
+  const rangeDiv = document.getElementById("range-selection");
+  const levelDiv = document.getElementById("level-selection");
+  const countDiv = document.getElementById("count-selection");
+  const subjectSelect = document.getElementById("subject-select");
+
+  function renderRangeCards(subject) {
+    rangeDiv.innerHTML = "";
+    subjectRanges[subject].forEach(r => {
+      const card = document.createElement("div");
+      card.innerText = r;
+      Object.assign(card.style, {
+        padding: "16px 0",
+        border: "2px solid #ccc",
+        borderRadius: "12px",
+        cursor: "pointer",
+        fontSize: "18px",
+        width: "240px",
+        textAlign: "center",
+      });
+      card.addEventListener("click", () => {
+        card.classList.toggle("selected");
+        card.style.background = card.classList.contains("selected") ? "#fff9b0" : "white";
+        card.style.borderColor = card.classList.contains("selected") ? "#f5e663" : "#ccc";
+      });
+      rangeDiv.appendChild(card);
+    });
+  }
+
+  renderRangeCards("geography");
+
+  subjectSelect.addEventListener("change", () => {
+    renderRangeCards(subjectSelect.value);
+  });
+
+  levels.forEach(l => {
+    const card = document.createElement("div");
+    card.innerText = l;
+    Object.assign(card.style, {
+      padding: "16px 44px",
+      border: "2px solid #ccc",
+      borderRadius: "12px",
+      cursor: "pointer",
+      fontSize: "20px",
+    });
+    card.addEventListener("click", () => {
+      Array.from(levelDiv.children).forEach(c => {
+        c.classList.remove("selected");
+        c.style.background = "white";
+        c.style.borderColor = "#ccc";
+      });
+      card.classList.add("selected");
+      card.style.background = "#fff9b0";
+      card.style.borderColor = "#f5e663";
+    });
+    levelDiv.appendChild(card);
+  });
+
+  counts.forEach(n => {
+    const card = document.createElement("div");
+    card.innerText = n + "問";
+    Object.assign(card.style, {
+      padding: "16px 44px",
+      border: "2px solid #ccc",
+      borderRadius: "12px",
+      cursor: "pointer",
+      fontSize: "20px",
+    });
+    card.addEventListener("click", () => {
+      Array.from(countDiv.children).forEach(c => {
+        c.classList.remove("selected");
+        c.style.background = "white";
+        c.style.borderColor = "#ccc";
+      });
+      card.classList.add("selected");
+      card.style.background = "#fff9b0";
+      card.style.borderColor = "#f5e663";
+    });
+    countDiv.appendChild(card);
+  });
+
+  document.getElementById("ichimon-back").addEventListener("click", renderTestMenu);
+
+  document.getElementById("start-ichimon-test").addEventListener("click", () => {
+    const selectedRanges = Array.from(rangeDiv.children)
+      .filter(c => c.classList.contains("selected"))
+      .map(c => c.innerText);
+
+    const selectedLevel = Array.from(levelDiv.children)
+      .find(c => c.classList.contains("selected"))?.innerText;
+
+    const selectedCountText = Array.from(countDiv.children)
+      .find(c => c.classList.contains("selected"))?.innerText;
+
+    if (selectedRanges.length === 0) return alert("出題範囲を1つ以上選択してください。");
+    if (!selectedLevel) return alert("レベルを選択してください。");
+    if (!selectedCountText) return alert("出題数を選択してください。");
+
+    const countNumber = Number(selectedCountText.replace("問", ""));
+
+    startIchimonTest(selectedRanges, selectedLevel, countNumber);
+  });
+renderMasteryBars();
+}
+
+
+
+// ================================
+// 習得管理用 定義
+// ================================
+const subjectClassesMap = {
+  geography: ["世界地図","日本地理","世界の気候","アジア・オセアニア","ヨーロッパ","アフリカ","北南米"],
+  history: ["原始","古代","中世","近世","近代","現代"],
+  civics: ["現代社会","日本国憲法","立法・行政・司法","地方自治","家計と企業","金融と経済","社会福祉"]
+};
+
+// ★ 総問題数
+const TOTAL_QUESTION_COUNT = {
+  geography: 471,
+  history: 609,
+  civics: 0
+};
+
+function getSubjectByClass(cls) {
+  for (const subject in subjectClassesMap) {
+    if (subjectClassesMap[subject].includes(cls)) return subject;
+  }
+  return null;
+}
+
+// ================================
+// 習得率バー描画
+// ================================
+async function renderMasteryBars() {
+  const uid = currentUser ? currentUser.id : "guest";
+  const barArea = document.getElementById("mastery-bars");
+  if (!barArea) return;
+
+  barArea.innerHTML = "";
+
+  // 進捗
+  const pSnap = await getDocs(query(
+    collection(db, "ichimon_progress"),
+    where("uid", "==", uid)
+  ));
+
+  // subject別に mastered 数を集計
+  const masteredCount = {
+    geography: 0,
+    history: 0,
+    civics: 0
+  };
+
+  pSnap.forEach(d => {
+    const data = d.data();
+    if (data.mastered && masteredCount[data.subject] !== undefined) {
+      masteredCount[data.subject]++;
+    }
+  });
+
+  for (const subject of ["geography","history","civics"]) {
+    const total = TOTAL_QUESTION_COUNT[subject];
+    const mastered = masteredCount[subject];
+    const rate = total === 0 ? 0 : Math.round((mastered / total) * 100);
+
+    const label =
+      subject === "geography" ? "地理" :
+      subject === "history" ? "歴史" : "公民";
+
+    barArea.innerHTML += `
+      <div style="margin-bottom:12px;text-align:left;">
+        <b>${label}：${rate}%</b>
+        <div style="width:100%;height:14px;background:#eee;border-radius:7px;">
+          <div style="width:${rate}%;height:100%;background:#fff3a0;border-radius:7px;"></div>
+        </div>
+      </div>
+    `;
+  }
+}
+
+// ================================
+// 一問一答 習得進捗保存
+// ================================
+async function updateIchimonProgress(question, isCorrect) {
+  const uid = currentUser ? currentUser.id : "guest";
+  const subject = getSubjectByClass(question.class);
+  if (!subject) return; // 全範囲は無視
+
+  const ref = doc(db, "ichimon_progress", `${uid}_${question.id}`);
+  const snap = await getDoc(ref);
+
+  let streak = 0;
+  let mastered = false;
+
+  if (snap.exists()) {
+    streak = snap.data().streak || 0;
+  }
+
+  if (isCorrect) {
+    streak++;
+    if (streak >= 3) mastered = true;
+  } else {
+    streak = 0;
+    mastered = false;
+  }
+
+  await setDoc(ref, {
+    uid,
+    questionId: question.id,
+    subject,
+    class: question.class,
+    streak,
+    mastered,
+    updatedAt: new Date()
+  });
+}
+
+
+
+
+// 社会一問一答テスト実施画面 //
+let currentIchimonTest = null;
+
+async function loadIchimonQuestions(selectedRanges, selectedLevel, limitCount) {
+  let allowedLevels = [];
+  if (selectedLevel === "A") allowedLevels = ["A"];
+  if (selectedLevel === "B") allowedLevels = ["B"];
+  if (selectedLevel === "C") allowedLevels = ["C"];
+
+  const q = query(
+    collection(db, "ichimon_questions"),
+    where("class", "in", selectedRanges),
+    where("level", "in", allowedLevels)
+  );
+
+  const snapshot = await getDocs(q);
+  let questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  questions = questions.sort(() => Math.random() - 0.5);
+  return questions.slice(0, limitCount);
+}
+
+// テスト開始
+async function startIchimonTest(selectedRanges, selectedLevel, questionCount) {
+  const questionList = await loadIchimonQuestions(selectedRanges, selectedLevel, questionCount);
+  if (questionList.length === 0) {
+    alert("指定した範囲・レベルの問題がありません。");
+    return;
+  }
+
+  currentIchimonTest = {
+    questions: questionList,
+    index: 0,
+    correct: 0,
+    userAnswers: []
+  };
+
+  renderIchimonTestQuestion();
+}
+
+
+// ======================================================
+// 問題表示
+// ======================================================
+function renderIchimonTestQuestion() {
+  const area = document.getElementById("content");
+  const test = currentIchimonTest;
+  const q = test.questions[test.index];
+
+  let answerFields = "";
+  q.answers.forEach((_, i) => {
+    answerFields += `
+      <div style="margin-bottom:12px;">
+        <label>（${i + 1}）</label>
+        <input id="ichimon-answer-${i}" class="input"
+          style="
+            width:80%;
+            height:40px;
+            margin-top:4px;
+            padding:6px 8px;
+            border-radius:12px;
+            border:2px solid #ccc;
+            font-size:16px;
+            outline:none;
+            box-shadow:none;
+            white-space: pre-wrap;
+          ">
+      </div>
+    `;
+  });
+
+  area.innerHTML = `
+    <div class="card" style="position:relative; padding:32px;">
+      <h2>第 ${test.index + 1} 問 / ${test.questions.length}</h2>
+      <div style="margin-top:20px;font-size:20px; white-space: pre-wrap;">${q.question}</div>
+
+      <div id="answer-area" style="margin-top:24px;">
+        ${answerFields}
+      </div>
+
+      <div style="text-align:left;margin-top:32px;">
+        <button id="ichimon-next" class="btn-primary"
+          style="padding:14px 36px; font-size:18px; border-radius:12px;">
+          答え合わせ
+        </button>
+      </div>
+
+      <div id="correct-answer"
+        style="margin-top:12px; color:red; font-size:20px; font-weight:bold;"></div>
+
+      <div id="popup-judge"
+        style="
+          position:absolute;
+          top:50%; left:50%;
+          transform:translate(-50%, -50%);
+          font-size:120px;
+          font-weight:bold;
+          display:none;
+          pointer-events:none;
+          z-index:999;">
+      </div>
+    </div>
+  `;
+
+  document.getElementById("ichimon-next").onclick = checkIchimonAnswer;
+}
+
+// ======================================================
+// 答え合わせ（別解対応済み）
+// ======================================================
+function checkIchimonAnswer() {
+  const test = currentIchimonTest;
+  const q = test.questions[test.index];
+
+  let isAllCorrect = true;
+  const userAnsList = [];
+
+  q.answers.forEach((ansObj, i) => {
+    const val = document.getElementById(`ichimon-answer-${i}`).value.trim();
+    userAnsList.push(val);
+
+    // ansObjが文字列かオブジェクトか判定
+    let validAnswers = [];
+    if (typeof ansObj === "string") {
+      validAnswers = [ansObj];
+    } else {
+      validAnswers = [ansObj.main, ...(Array.isArray(ansObj.alternatives) ? ansObj.alternatives : [])];
+    }
+
+    const matched = validAnswers.some(a => a.toLowerCase() === val.toLowerCase());
+    if (!matched) isAllCorrect = false;
+  });
+
+  // ユーザー解答を保存（文字列化して表示用に加工）
+  const correctAnswerText = q.answers.map(ansObj => {
+    if (typeof ansObj === "string") return ansObj;
+    const alts = Array.isArray(ansObj.alternatives) ? ansObj.alternatives : [];
+    return ansObj.main + (alts.length ? " (" + alts.join(", ") + ")" : "");
+  });
+
+  test.userAnswers[test.index] = {
+  question: q.question,           // ← 追加：問題文
+  userAnswer: userAnsList,        // ← yourAnswer → userAnswer に変更
+  correctAnswer: correctAnswerText,
+  isCorrect: isAllCorrect,
+  score: isAllCorrect ? (q.score || 0) : 0
+};
+  renderIchimonJudge();
+  document.getElementById("ichimon-next").style.display = "none";
+  updateIchimonProgress(q, isAllCorrect);
+
+}
+
+// ======================================================
+// ○×表示 + 次へ
+// ======================================================
+function renderIchimonJudge() {
+  const test = currentIchimonTest;
+  const ua = test.userAnswers[test.index];
+  const popup = document.getElementById("popup-judge");
+  const correctArea = document.getElementById("correct-answer");
+
+  // 〇×を中央に表示
+  popup.innerText = ua.isCorrect ? "〇" : "✕";
   popup.style.color = ua.isCorrect ? "green" : "red";
   popup.style.display = "block";
   popup.style.opacity = "1";
@@ -6461,3 +6886,10 @@ window.addEventListener("beforeunload", function (event) {
 
 </body>
 </html>
+
+
+
+
+
+
+
