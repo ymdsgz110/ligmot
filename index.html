@@ -5,14 +5,13 @@
   <title>LIGMOT</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    /* === デザインは変更していません（見た目そのまま） === */
     body {
       margin: 0;
       font-family: "Segoe UI", sans-serif;
       background: #f4f6f8;
       color: #333;
     }
-    /* ログイン画面 */
+    /ログイン
     #login-page {
       display: flex;
       justify-content: center;
@@ -50,7 +49,7 @@
     .login-box button:hover { background: #218838; }
     .error { color: red; font-size: 0.9rem; margin-top: 0.5rem; }
 
-    /* メインページ（レイアウトは絶対に変えない） */
+    /* メインページ
     #main-page { display: none; height: 100vh; }
     header {
       display: flex;
@@ -2261,9 +2260,9 @@ const subjectClassesMap = {
 
 // ★ 総問題数
 const TOTAL_QUESTION_COUNT = {
-  geography: 471,
+  geography: 478,
   history: 754,
-  civics: 82
+  civics: 278
 };
 
 function getSubjectByClass(cls) {
@@ -6886,6 +6885,7 @@ window.addEventListener("beforeunload", function (event) {
 
 </body>
 </html>
+
 
 
 
