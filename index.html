@@ -5,12 +5,14 @@
   <title>LIGMOT</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    /* === デザインは変更していません（見た目そのまま） === */
     body {
       margin: 0;
       font-family: "Segoe UI", sans-serif;
       background: #f4f6f8;
       color: #333;
     }
+    /* ログイン画面 */
     #login-page {
       display: flex;
       justify-content: center;
@@ -48,6 +50,7 @@
     .login-box button:hover { background: #218838; }
     .error { color: red; font-size: 0.9rem; margin-top: 0.5rem; }
 
+    /* メインページ（レイアウトは絶対に変えない） */
     #main-page { display: none; height: 100vh; }
     header {
       display: flex;
@@ -59,8 +62,8 @@
     }
     .logo { font-size: 1.2rem; font-weight: bold; }
     .user-info { display:flex; align-items:center; gap:1rem; }
-    #session-timer { font-size: 0.95rem; color:#f1c40f; } 
-    #test-timer { font-size:0.95rem; color:#2ecc71; font-weight:bold; margin-left:8px; } /* テストタイマー/
+    #session-timer { font-size: 0.95rem; color:#f1c40f; } /* 追加表示（見た目に溶けるよう控えめ） */
+    #test-timer { font-size:0.95rem; color:#2ecc71; font-weight:bold; margin-left:8px; } /* テストタイマー（右上表示） */
     .logout-btn {
       background: #e74c3c;
       border: none;
@@ -84,7 +87,7 @@
       cursor: pointer;
     }
     nav ul li:hover { background: #3d566e; }
-    nav ul li.disabled { opacity: 0.4; pointer-events: none; } /* テスト中無効化 */
+    nav ul li.disabled { opacity: 0.4; pointer-events: none; } /* テスト中は無効化 */
     section { flex: 1; padding: 2rem; overflow-y: auto; }
 
     .card { background:#fff; border-radius:10px; padding:18px; box-shadow:0 4px 12px rgba(0,0,0,0.06); margin-bottom:16px; }
@@ -115,7 +118,7 @@
       100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 2px rgba(255,255,255,0.5)); }
     }
 
-/* --- bnp --- */
+/* --- bnp pill --- */
 #bnp-display{
   background: #fff;
   color: #2c3e50;
@@ -133,7 +136,7 @@
 #bnp-value{ font-size:1.05em; }
 #bnp-unit{ font-size:0.85em; color:#666; padding-left:4px; }
 
-/スペース改行/
+/* 文法特訓の設問文 → スペースや改行を保持 */
 .grammar-question-text {
   white-space: pre-wrap;
 }
@@ -165,6 +168,7 @@
 }
   </style>
 <style>
+  /* 改行やスペースをそのまま反映 */
   .activity-question-text {
     white-space: pre-wrap;
   }
@@ -173,32 +177,6 @@
   <!-- Font Awesome 読み込み -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-
-<script type="module">
-  // Firebase 本体
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyAIg8mvIn8K5qDfP_ozemtZRqKIEioTfMY",
-    authDomain: "la-estacion-ymd.firebaseapp.com",
-    projectId: "la-estacion-ymd",
-    storageBucket: "la-estacion-ymd.firebasestorage.app",
-    messagingSenderId: "996153459691",
-    appId: "1:996153459691:web:5d9054f92f521fb8388fae",
-    measurementId: "G-QKD7SC860Y"
-  };
-
-  // Firebase 初期化
-  const app = initializeApp(firebaseConfig);
-
-  // 使う機能
-  const auth = getAuth(app);
-  const db   = getFirestore(app);
-
-  console.log("🔥 Firebase 接続OK");
-</script>
 
 
 <body>
@@ -293,8 +271,7 @@ onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = { id: user.uid, email: user.email };
     console.log("✅ ログイン中:", currentUser.email);
-    await loadMyWordListFromFirestore(); // 
-
+    await loadMyWordListFromFirestore(); // ← Firestoreから自分の単語を読み込み
   } else {
     console.log("⚠️ ログアウト状態");
     currentUser = null;
@@ -333,7 +310,7 @@ document.addEventListener("click", async (e) => {
     // Reading取得
   const readingQuestions = Array.from(document.querySelectorAll('#reading-questions > .card')).map(div => {
   const textArea = div.querySelector('.reading-text');
-  const text = textArea ? textArea.value.trim() : "";
+  const text = textArea ? textArea.value.trim() : ""; // 念のため安全に取得
   const subquestions = Array.from(div.querySelectorAll('.reading-questions-list .card')).map(qDiv => {
     const type = qDiv.querySelector('.reading-type').value;
     const question = qDiv.querySelector('.reading-question').value.trim();
@@ -385,10 +362,10 @@ document.addEventListener("click", async (e) => {
       "test0110":   { password: "assalam", role: "user" },
       "user011001": { password: "assalam", role: "user" },
       "user011002": { password: "assalam", role: "user" },
-      "user011003": { password: "urayaha", role: "user" },
+      "user011003": { password: "assalam", role: "user" },
       "user011004": { password: "assalam", role: "user" },
       "user011005": { password: "assalam", role: "user" },
-      "user011006": { password: "iloveakio", role: "user" },
+      "user011006": { password: "assalam", role: "user" },
       "user011007": { password: "assalam", role: "user" }
     };
     let currentUser = null;
@@ -770,6 +747,7 @@ function renderCreateActivity() {
    }
 
 
+// 🧭 管理者用：提出状況確認（折りたたみ式）
 // 🧭 管理者用：提出状況確認（折りたたみ式 + 採点可能）
 async function renderActivitySubmissions() {
   const content = document.getElementById("activity-admin-area");
@@ -2125,9 +2103,9 @@ function renderIchimonTrainingSetup() {
   const counts = [10, 20, 30];
 
   const subjectRanges = {
-    geography: ["世界地図","日本地理","世界の気候","アジア・オセアニア","ヨーロッパ","アフリカ","北南米"],
-    history: ["原始","古代","中世","近世","近代","現代"],
-    civics: ["現代社会","日本国憲法","民主政治","立法・行政・司法","地方自治","家計と企業","金融と経済","社会福祉","国際社会"]
+    geography: ["世界地図","日本地理","世界の気候","アジア・オセアニア","ヨーロッパ","アフリカ","北南米","全範囲"],
+    history: ["原始","古代","中世","近世","近代","現代","全範囲"],
+    civics: ["現代社会","日本国憲法","立法・行政・司法","地方自治","家計と企業","金融と経済","社会福祉","全範囲"]
   };
 
   area.innerHTML = `
@@ -2281,11 +2259,11 @@ const subjectClassesMap = {
   civics: ["現代社会","日本国憲法","立法・行政・司法","地方自治","家計と企業","金融と経済","社会福祉"]
 };
 
-// ★ 総問題数
+//総問題数
 const TOTAL_QUESTION_COUNT = {
-  geography: 471,
-  history: 754,
-  civics: 82
+  geography: 484,
+  history: 784,
+  civics: 250
 };
 
 function getSubjectByClass(cls) {
@@ -2391,8 +2369,8 @@ let currentIchimonTest = null;
 async function loadIchimonQuestions(selectedRanges, selectedLevel, limitCount) {
   let allowedLevels = [];
   if (selectedLevel === "A") allowedLevels = ["A"];
-  if (selectedLevel === "B") allowedLevels = ["B"];
-  if (selectedLevel === "C") allowedLevels = ["C"];
+  if (selectedLevel === "B") allowedLevels = ["A", "B"];
+  if (selectedLevel === "C") allowedLevels = ["A", "B", "C"];
 
   const q = query(
     collection(db, "ichimon_questions"),
@@ -2547,7 +2525,7 @@ function renderIchimonJudge() {
   const correctArea = document.getElementById("correct-answer");
 
   // 〇×を中央に表示
-  popup.innerText = ua.isCorrect ? "〇" : "✕";
+  popup.innerText = ua.isCorrect ? "⭕" : "❌";
   popup.style.color = ua.isCorrect ? "green" : "red";
   popup.style.display = "block";
   popup.style.opacity = "1";
@@ -2616,7 +2594,7 @@ async function saveIchimonResult(test) {
       createdAt: new Date()
     });
 
-    console.log("一問一答結果を Firestore に保存しました");
+    console.log("🔥 一問一答結果を Firestore に保存しました");
   } catch (err) {
     console.error("saveIchimonResult error", err);
   }
@@ -6908,10 +6886,3 @@ window.addEventListener("beforeunload", function (event) {
 
 </body>
 </html>
-
-
-
-
-
-
-
