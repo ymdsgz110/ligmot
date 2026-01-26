@@ -362,10 +362,10 @@ document.addEventListener("click", async (e) => {
       "test0110":   { password: "assalam", role: "user" },
       "user011001": { password: "assalam", role: "user" },
       "user011002": { password: "assalam", role: "user" },
-      "user011003": { password: "urayaha", role: "user" },
+      "user011003": { password: "assalam", role: "user" },
       "user011004": { password: "assalam", role: "user" },
       "user011005": { password: "assalam", role: "user" },
-      "user011006": { password: "iloveakio", role: "user" },
+      "user011006": { password: "assalam", role: "user" },
       "user011007": { password: "assalam", role: "user" }
     };
     let currentUser = null;
@@ -2103,9 +2103,9 @@ function renderIchimonTrainingSetup() {
   const counts = [10, 20, 30];
 
   const subjectRanges = {
-    geography: ["世界地図","日本地理","世界の気候","アジア・オセアニア","ヨーロッパ","アフリカ","北南米","全範囲"],
-    history: ["原始","古代","中世","近世","近代","現代","全範囲"],
-    civics: ["現代社会","日本国憲法","立法・行政・司法","地方自治","家計と企業","金融と経済","社会福祉","全範囲"]
+    geography: ["世界地図","日本地理","世界の気候","アジア・オセアニア","ヨーロッパ","アフリカ","北南米"],
+    history: ["原始","古代","中世","近世","近代","現代"],
+    civics: ["現代社会","日本国憲法","立法・行政・司法","地方自治","家計と企業","金融と経済","社会福祉"]
   };
 
   area.innerHTML = `
@@ -2134,7 +2134,20 @@ function renderIchimonTrainingSetup() {
     <h3 style="text-align:left;">レベルを選択してください</h3>
     <div id="level-selection" style="display:flex;gap:16px;justify-content:center;margin:24px 0;"></div>
 
-    <h3 style="text-align:left;">出題数を選択してください</h3>
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+  <h3 style="margin:0;">出題数を選択してください</h3>
+
+  <label style="
+    font-size:14px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  ">
+    <input type="checkbox" id="exclude-mastered">
+    習得済みを除外する
+  </label>
+</div>
     <div id="count-selection" style="display:flex;gap:16px;justify-content:center;margin:24px 0;"></div>
 
     <div style="margin-top:32px;">
@@ -2227,6 +2240,8 @@ function renderIchimonTrainingSetup() {
   document.getElementById("ichimon-back").addEventListener("click", renderTestMenu);
 
   document.getElementById("start-ichimon-test").addEventListener("click", () => {
+    const excludeMastered =
+      document.getElementById("exclude-mastered").checked;
     const selectedRanges = Array.from(rangeDiv.children)
       .filter(c => c.classList.contains("selected"))
       .map(c => c.innerText);
@@ -2243,7 +2258,7 @@ function renderIchimonTrainingSetup() {
 
     const countNumber = Number(selectedCountText.replace("問", ""));
 
-    startIchimonTest(selectedRanges, selectedLevel, countNumber);
+    startIchimonTest(selectedRanges, selectedLevel, countNumber, excludeMastered);
   });
 renderMasteryBars();
 }
@@ -2261,9 +2276,9 @@ const subjectClassesMap = {
 
 //総問題数
 const TOTAL_QUESTION_COUNT = {
-  geography: 476,
-  history: 754,
-  civics: 278
+  geography: 484,
+  history: 784,
+  civics: 250
 };
 
 function getSubjectByClass(cls) {
@@ -2366,7 +2381,23 @@ async function updateIchimonProgress(question, isCorrect) {
 // 社会一問一答テスト実施画面 //
 let currentIchimonTest = null;
 
-async function loadIchimonQuestions(selectedRanges, selectedLevel, limitCount) {
+async function loadIchimonQuestions(selectedRanges, selectedLevel, limitCount, excludeMastered) {
+  let masteredIds = new Set();
+
+if (excludeMastered) {
+  const uid = currentUser ? currentUser.id : "guest";
+
+  const snap = await getDocs(query(
+    collection(db, "ichimon_progress"),
+    where("uid", "==", uid),
+    where("mastered", "==", true)
+  ));
+
+  snap.forEach(d => {
+    masteredIds.add(d.data().questionId);
+  });
+}
+
   let allowedLevels = [];
   if (selectedLevel === "A") allowedLevels = ["A"];
   if (selectedLevel === "B") allowedLevels = ["A", "B"];
@@ -2380,13 +2411,16 @@ async function loadIchimonQuestions(selectedRanges, selectedLevel, limitCount) {
 
   const snapshot = await getDocs(q);
   let questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+if (excludeMastered) {
+  questions = questions.filter(q => !masteredIds.has(q.id));
+}
   questions = questions.sort(() => Math.random() - 0.5);
   return questions.slice(0, limitCount);
 }
 
 // テスト開始
-async function startIchimonTest(selectedRanges, selectedLevel, questionCount) {
-  const questionList = await loadIchimonQuestions(selectedRanges, selectedLevel, questionCount);
+async function startIchimonTest(selectedRanges, selectedLevel, questionCount, excludeMastered) {
+  const questionList = await loadIchimonQuestions(selectedRanges, selectedLevel, questionCount, excludeMastered);
   if (questionList.length === 0) {
     alert("指定した範囲・レベルの問題がありません。");
     return;
