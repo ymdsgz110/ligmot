@@ -5,7 +5,6 @@
   <title>LIGMOT</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    /* === デザインは変更していません（見た目そのまま） === */
     body {
       margin: 0;
       font-family: "Segoe UI", sans-serif;
@@ -50,7 +49,7 @@
     .login-box button:hover { background: #218838; }
     .error { color: red; font-size: 0.9rem; margin-top: 0.5rem; }
 
-    /* メインページ（レイアウトは絶対に変えない） */
+    /* メインページ */
     #main-page { display: none; height: 100vh; }
     header {
       display: flex;
@@ -87,7 +86,7 @@
       cursor: pointer;
     }
     nav ul li:hover { background: #3d566e; }
-    nav ul li.disabled { opacity: 0.4; pointer-events: none; } /* テスト中は無効化 */
+    nav ul li.disabled { opacity: 0.4; pointer-events: none; } /* テスト中無効化 */
     section { flex: 1; padding: 2rem; overflow-y: auto; }
 
     .card { background:#fff; border-radius:10px; padding:18px; box-shadow:0 4px 12px rgba(0,0,0,0.06); margin-bottom:16px; }
@@ -201,14 +200,13 @@
     <header>
       <div class="logo">📘 LIGMOT</div>
       <div class="user-info" aria-live="polite">
-<!-- 既存の .user-info の一番上（または user-name の左）に追加 -->
 <div id="bnp-display" title="獲得バナポ">
   <span id="bnp-value">0</span>
   <span id="bnp-unit"> bnp</span>
 </div>
         <span id="user-name">—</span>
         <span id="session-timer">残り: 60:00</span>
-        <span id="test-timer" class="hidden">テスト残り: 15:00</span> <!-- テスト中のみ表示 -->
+        <span id="test-timer" class="hidden">テスト残り: 15:00</span> 
         <button id="logout-btn" class="logout-btn">ログアウト</button>
       </div>
     </header>
@@ -6920,5 +6918,6 @@ window.addEventListener("beforeunload", function (event) {
 
 </body>
 </html>
+
 
 
