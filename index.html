@@ -1983,8 +1983,6 @@ async function renderIchimonList() {
     const keyword = document.getElementById('ichimon-search').value.trim();
     loadAndShowIchimonQuestions(keyword);
   });
-
-  await loadAndShowIchimonQuestions();
 }
 
 // --- データ取得と描画（キーワードによる部分一致はクライアント側でフィルタ） ---
@@ -6918,6 +6916,7 @@ window.addEventListener("beforeunload", function (event) {
 
 </body>
 </html>
+
 
 
 
