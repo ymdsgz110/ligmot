@@ -744,8 +744,6 @@ function renderCreateActivity() {
 
    }
 
-
-// 🧭 管理者用：提出状況確認（折りたたみ式）
 // 🧭 管理者用：提出状況確認（折りたたみ式 + 採点可能）
 async function renderActivitySubmissions() {
   const content = document.getElementById("activity-admin-area");
@@ -2757,6 +2755,245 @@ function renderIchimonDetail() {
 
 
 
+// ===============================
+// 🔹 漢字テスト管理システム（編集対応版）
+// ===============================
+
+document
+  .getElementById("menu-japaneses")
+  .addEventListener("click", renderKanjiSystem);
+
+let editId = null; // 編集中ID保持
+
+// ===============================
+// 画面描画
+// ===============================
+function renderKanjiSystem() {
+  document.getElementById("content").innerHTML = `
+    <div style="max-width:900px;margin:40px auto;font-family:sans-serif;">
+
+      <h2 style="margin-bottom:30px;font-size:26px;">📘 漢字テスト管理</h2>
+
+      <!-- 問題追加 -->
+      <div style="background:#ffffff;padding:30px;border-radius:20px;
+                  box-shadow:0 10px 30px rgba(0,0,0,0.06);margin-bottom:40px;">
+        <h3 style="margin-bottom:20px;">問題追加 / 編集</h3>
+
+        <div style="display:flex;gap:15px;margin-bottom:15px;">
+          <select id="kanji-class" style="${selectStyle()}">
+            <option>Dパーフェクト</option>
+            <option>Dファイナル</option>
+            <option>漢字の仕上げ</option>
+          </select>
+
+          <select id="kanji-page" style="${selectStyle()}">
+            <option>①</option>
+            <option>②</option>
+            <option>③</option>
+            <option>④</option>
+          </select>
+        </div>
+
+        <input id="kanji-question" placeholder="問題"
+          style="${inputStyle()}">
+
+        <input id="kanji-answer" placeholder="正解漢字"
+          style="${inputStyle()}">
+
+        <button id="save-btn" style="${primaryButton()}">
+          保存
+        </button>
+      </div>
+
+      <!-- 問題一覧 -->
+      <div style="background:#ffffff;padding:30px;border-radius:20px;
+                  box-shadow:0 10px 30px rgba(0,0,0,0.06);">
+        <h3 style="margin-bottom:20px;">問題一覧</h3>
+        <button id="reload-btn" style="${secondaryButton()}">更新</button>
+        <div id="kanji-list" style="margin-top:25px;"></div>
+      </div>
+
+    </div>
+  `;
+
+  document
+    .getElementById("save-btn")
+    .addEventListener("click", saveKanjiQuestion);
+
+  document
+    .getElementById("reload-btn")
+    .addEventListener("click", loadKanjiQuestions);
+
+  loadKanjiQuestions();
+}
+
+// ===============================
+// 🔹 保存（追加 / 更新）
+// ===============================
+async function saveKanjiQuestion() {
+  const className = document.getElementById("kanji-class").value;
+  const page = document.getElementById("kanji-page").value;
+  const question = document.getElementById("kanji-question").value;
+  const answer = document.getElementById("kanji-answer").value;
+
+  if (!question || !answer) {
+    alert("問題と答えを入力してください");
+    return;
+  }
+
+  if (editId) {
+    // 🔹 更新
+    await updateDoc(doc(db, "kanjiQuestions", editId), {
+      class: className,
+      page: page,
+      question: question,
+      answer: answer
+    });
+
+    alert("更新しました");
+    editId = null;
+
+  } else {
+    // 🔹 新規追加
+    await addDoc(collection(db, "kanjiQuestions"), {
+      class: className,
+      page: page,
+      question: question,
+      answer: answer,
+      createdAt: serverTimestamp()
+    });
+
+    alert("保存しました");
+  }
+
+  clearForm();   // ← 完全初期化
+  loadKanjiQuestions();
+}
+
+// ===============================
+// 🔹 一覧表示
+// ===============================
+async function loadKanjiQuestions() {
+  const snapshot = await getDocs(collection(db, "kanjiQuestions"));
+  const list = document.getElementById("kanji-list");
+  list.innerHTML = "";
+
+  snapshot.forEach(docSnap => {
+    const data = docSnap.data();
+
+    const card = document.createElement("div");
+    card.style = `
+      border:1px solid #eee;
+      padding:20px;
+      margin-bottom:15px;
+      border-radius:15px;
+      background:#fafafa;
+    `;
+
+    card.innerHTML = `
+      <strong>${data.class} ${data.page}</strong><br>
+      ${data.question} → <b>${data.answer}</b>
+      <div style="margin-top:10px;">
+        <button class="edit-btn" style="${secondaryButton()}">編集</button>
+        <button class="delete-btn" style="background:#ef4444;color:white;border:none;padding:10px 18px;border-radius:12px;cursor:pointer;">削除</button>
+      </div>
+    `;
+
+    card.querySelector(".delete-btn")
+      .addEventListener("click", () => deleteKanji(docSnap.id));
+
+    card.querySelector(".edit-btn")
+      .addEventListener("click", () => startEdit(docSnap.id, data));
+
+    list.appendChild(card);
+  });
+}
+
+// ===============================
+// 🔹 編集開始
+// ===============================
+function startEdit(id, data) {
+  editId = id;
+
+  document.getElementById("kanji-class").value = data.class;
+  document.getElementById("kanji-page").value = data.page;
+  document.getElementById("kanji-question").value = data.question;
+  document.getElementById("kanji-answer").value = data.answer;
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// ===============================
+// 🔹 削除
+// ===============================
+async function deleteKanji(id) {
+  await deleteDoc(doc(db, "kanjiQuestions", id));
+  loadKanjiQuestions();
+}
+
+// ===============================
+// 🔹 フォーム完全初期化
+// ===============================
+function clearForm() {
+  document.getElementById("kanji-class").selectedIndex = 0;
+  document.getElementById("kanji-page").selectedIndex = 0;
+  document.getElementById("kanji-question").value = "";
+  document.getElementById("kanji-answer").value = "";
+}
+
+// ===============================
+// 🔹 スタイル群
+// ===============================
+function selectStyle() {
+  return `
+    padding:14px;
+    border-radius:16px;
+    border:1px solid #ddd;
+    font-size:15px;
+    background:#f9fafb;
+    cursor:pointer;
+    flex:1;
+  `;
+}
+
+function inputStyle() {
+  return `
+    width:100%;
+    padding:14px;
+    margin-bottom:15px;
+    border-radius:16px;
+    border:1px solid #ddd;
+    font-size:15px;
+  `;
+}
+
+function primaryButton() {
+  return `
+    background:#3730a3; /* ← 暗めに変更 */
+    color:white;
+    border:none;
+    padding:12px 22px;
+    border-radius:14px;
+    font-size:15px;
+    cursor:pointer;
+    transition:0.2s;
+  `;
+}
+
+function secondaryButton() {
+  return `
+    background:#e5e7eb;
+    border:none;
+    padding:10px 18px;
+    border-radius:12px;
+    cursor:pointer;
+    margin-right:10px;
+  `;
+}
+
+
+
+
 
 
 
@@ -3143,6 +3380,13 @@ if (grammarBtn) grammarBtn.addEventListener('click', async () => {
 const wordtestBtn = document.getElementById('start-wordtest');
 if (wordtestBtn) wordtestBtn.addEventListener('click', renderWordTestMenu);
 
+//国語テスト系
+const kanjiBtn = document.getElementById('start-kanji');
+if (kanjiBtn) {
+  kanjiBtn.addEventListener('click', () => {
+    renderKanjiSetup();
+  });
+}
 
 // 社会テスト系：
 const nenBtn = document.getElementById('start-nen');
@@ -6916,10 +7160,3 @@ window.addEventListener("beforeunload", function (event) {
 
 </body>
 </html>
-
-
-
-
-
-
-
