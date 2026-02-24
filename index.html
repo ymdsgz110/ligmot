@@ -2265,14 +2265,14 @@ renderMasteryBars();
 const subjectClassesMap = {
   geography: ["世界地図","日本地理","世界の気候","アジア・オセアニア","ヨーロッパ","アフリカ","北南米"],
   history: ["原始","古代","中世","近世","近代","現代"],
-  civics: ["現代社会","日本国憲法","立法・行政・司法",,"民主政治","地方自治","家計と企業","金融と経済","社会福祉","国際社会"]
+  civics: ["現代社会","日本国憲法","立法・行政・司法","民主政治","地方自治","家計と企業","金融と経済","社会福祉","国際社会"]
 };
 
 //総問題数
 const TOTAL_QUESTION_COUNT = {
-  geography: 484,
-  history: 784,
-  civics: 250
+  geography: 482,
+  history: 761,
+  civics: 285
 };
 
 function getSubjectByClass(cls) {
@@ -2565,7 +2565,7 @@ function renderIchimonJudge() {
   }, 1000);
 
   // 正答表示
-  correctArea.innerText = "正しい答え: " + ua.correctAnswer.join(" / ");
+  correctArea.innerText = "正解: " + ua.correctAnswer.join(" / ");
 
   if (ua.isCorrect) test.correct++;
 
@@ -2758,12 +2758,11 @@ function renderIchimonDetail() {
 // ===============================
 // 🔹 漢字テスト管理システム（編集対応版）
 // ===============================
-
 document
   .getElementById("menu-japaneses")
   .addEventListener("click", renderKanjiSystem);
 
-let editId = null; // 編集中ID保持
+let editId = null; 
 
 // ===============================
 // 画面描画
@@ -2772,7 +2771,7 @@ function renderKanjiSystem() {
   document.getElementById("content").innerHTML = `
     <div style="max-width:900px;margin:40px auto;font-family:sans-serif;">
 
-      <h2 style="margin-bottom:30px;font-size:26px;">📘 漢字テスト管理</h2>
+      <h2 style="margin-bottom:30px;font-size:26px;">漢字テスト管理</h2>
 
       <!-- 問題追加 -->
       <div style="background:#ffffff;padding:30px;border-radius:20px;
@@ -2992,9 +2991,432 @@ function secondaryButton() {
 }
 
 
+// ===============================
+// 🔹 漢字テスト 範囲設定画面
+// ===============================
+function renderKanjiTestSetup() {
+
+  const area = document.getElementById("content");
+
+  const classes = ["Dパーフェクト", "Dファイナル", "漢字の仕上げ"];
+  const pages = ["①","②","③","④","⑤"];
+
+  let selectedClass = null;
+  let selectedPage = null;
+
+  area.innerHTML = `
+  <div class="card" style="max-width:900px;margin:40px auto;padding:32px;text-align:center;">
+    <h2 style="margin-bottom:32px;">漢字テスト 範囲設定</h2>
+
+    <h3 style="text-align:left;">クラスを選択してください</h3>
+    <div id="class-selection"
+      style="display:flex;gap:16px;justify-content:center;margin:24px 0;">
+    </div>
+
+    <h3 style="text-align:left;">ページを選択してください</h3>
+    <div id="page-selection"
+      style="display:flex;gap:16px;justify-content:center;margin:24px 0;">
+    </div>
+
+    <div style="margin-top:32px;">
+      <button id="start-kanji-test-btn"
+        style="padding:12px 28px;font-size:18px;
+               border:none;border-radius:12px;
+               background:#172554;color:white;">
+        テスト開始
+      </button>
+
+      <button id="kanji-back"
+        style="padding:12px 28px;font-size:18px;
+               border:1px solid #ccc;border-radius:12px;
+               background:white;margin-left:20px;">
+        戻る
+      </button>
+    </div>
+  </div>
+  `;
+
+  const classDiv = document.getElementById("class-selection");
+  const pageDiv = document.getElementById("page-selection");
+
+  // =========================
+  // クラスカード生成
+  // =========================
+  classes.forEach(c => {
+    const card = document.createElement("div");
+    card.innerText = c;
+
+    Object.assign(card.style, {
+      padding: "16px 44px",
+      border: "2px solid #ccc",
+      borderRadius: "12px",
+      cursor: "pointer",
+      fontSize: "20px",
+      background: "white"
+    });
+
+    card.addEventListener("click", () => {
+
+      Array.from(classDiv.children).forEach(el => {
+        el.style.background = "white";
+        el.style.borderColor = "#ccc";
+      });
+
+      card.style.background = "#f7cfa0";
+      card.style.borderColor = "#f7cfa0";
+
+      selectedClass = c;   // ← ここで保存
+    });
+
+    classDiv.appendChild(card);
+  });
+
+  // =========================
+  // ページカード生成
+  // =========================
+  pages.forEach(p => {
+    const card = document.createElement("div");
+    card.innerText = p;
+
+    Object.assign(card.style, {
+      padding: "16px 44px",
+      border: "2px solid #ccc",
+      borderRadius: "12px",
+      cursor: "pointer",
+      fontSize: "20px",
+      background: "white"
+    });
+
+    card.addEventListener("click", () => {
+
+      Array.from(pageDiv.children).forEach(el => {
+        el.style.background = "white";
+        el.style.borderColor = "#ccc";
+      });
+
+      card.style.background = "#f7cfa0";
+      card.style.borderColor = "#f7cfa0";
+
+      selectedPage = p;   // ← ここで保存
+    });
+
+    pageDiv.appendChild(card);
+  });
+
+  // 戻る
+  document
+    .getElementById("kanji-back")
+    .addEventListener("click", renderTestMenu);
+
+  // =========================
+  // テスト開始
+  // =========================
+  document
+    .getElementById("start-kanji-test-btn")
+    .addEventListener("click", () => {
+
+      if (!selectedClass) {
+        alert("クラスを選択してください");
+        return;
+      }
+
+      if (!selectedPage) {
+        alert("ページを選択してください");
+        return;
+      }
+
+      startKanjiTest(selectedClass, selectedPage);
+    });
+}
+
+// ===============================
+// 🔹 漢字テスト開始
+// ===============================
+async function startKanjiTest(selectedClass, selectedPage) {
+
+  if (!selectedClass || !selectedPage) {
+    alert("クラスとページを選択してください");
+    return;
+  }
+
+  if (!confirm(`${selectedClass} ${selectedPage} のテストを開始しますか？`))
+    return;
+
+  try {
+
+    // 🔹 Firestoreから完全一致で取得
+    const q = query(
+      collection(db, "kanjiQuestions"),
+      where("class", "==", selectedClass),
+      where("page", "==", selectedPage)
+    );
+
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      alert("この範囲の問題はまだ登録されていません。");
+      return;
+    }
+
+    const questions = [];
+    snapshot.forEach(docSnap => {
+      questions.push({
+        id: docSnap.id,
+        ...docSnap.data()
+      });
+    });
+
+    renderKanjiTestScreen(questions);
+
+  } catch (error) {
+    console.error("テスト開始エラー:", error);
+    alert("データの取得中にエラーが発生しました。");
+  }
+}
+
+// ===============================
+// 🔹 テスト画面描画（結果保存対応版）
+// ===============================
+function renderKanjiTestScreen(questions) {
+
+  let currentIndex = 0;
+  let score = 0;
+  let answered = false;
+
+  const userAnswers = [];
+
+  function showQuestion() {
+
+    answered = false;
+    const q = questions[currentIndex];
+
+    document.getElementById("content").innerHTML = `
+      <div style="max-width:700px;margin:60px auto;font-family:sans-serif;">
+        <div style="background:white;padding:40px;border-radius:20px;
+                    box-shadow:0 10px 30px rgba(0,0,0,0.08);
+                    position:relative;">
+
+          <h3>問題 ${currentIndex + 1} / ${questions.length}</h3>
+
+          <p style="font-size:22px;margin:30px 0;">
+            ${q.question}
+          </p>
+
+          <input id="answer-input"
+            placeholder="ひらがなで入力"
+            style="width:100%;padding:12px;font-size:18px;
+                   border-radius:10px;border:1px solid #ccc;">
+
+          <div id="correct-answer"
+               style="margin-top:10px;color:red;font-weight:bold;"></div>
+
+          <div id="error-message"
+               style="margin-top:5px;color:red;font-size:14px;"></div>
+
+          <button id="submit-answer"
+            style="margin-top:20px;padding:12px 25px;border:none;
+                   background:#1e3a8a;color:white;
+                   border-radius:10px;font-size:16px;">
+            解答
+          </button>
+
+          <div id="popup"
+               style="display:none;position:absolute;top:50%;left:50%;
+                      transform:translate(-50%,-50%);
+                      font-size:80px;font-weight:bold;">
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    const input = document.getElementById("answer-input");
+    const button = document.getElementById("submit-answer");
+    const popup = document.getElementById("popup");
+    const correctAnswer = document.getElementById("correct-answer");
+    const errorMessage = document.getElementById("error-message");
+
+    button.addEventListener("click", async () => {
+
+      if (!answered) {
+
+        const userAnswer = input.value.trim();
+        const valid = /^[ぁ-んァ-ヶー]+$/.test(userAnswer);
+
+        if (!valid) {
+          errorMessage.textContent =
+            "使用できない文字が含まれています";
+          return;
+        }
+
+        errorMessage.textContent = "";
+
+        const isCorrect = userAnswer === q.answer;
+
+        if (isCorrect) {
+          score++;
+          popup.textContent = "〇";
+          popup.style.color = "#10b981";
+        } else {
+          popup.textContent = "✕";
+          popup.style.color = "#ef4444";
+        }
+
+        popup.style.display = "block";
+        correctAnswer.textContent = `正解：${q.answer}`;
+        input.disabled = true;
+        button.textContent = "次へ";
+        answered = true;
+
+        // 🔹 回答記録
+        userAnswers.push({
+          question: q.question,
+          userAnswer,
+          correctAnswer: q.answer,
+          score: isCorrect ? 1 : 0
+        });
+
+      } else {
+
+        currentIndex++;
+
+        if (currentIndex < questions.length) {
+          showQuestion();
+        } else {
+          await saveKanjiResult({
+            questions,
+            userAnswers,
+            correct: score
+          });
+
+// BNP 加算
+  try {
+    if (typeof addBnp === 'function') {
+      await addBnp(score);
+      console.log("BNP にスコアを加算しました:", totalScore);
+    } else {
+      console.warn("addBnpが見つかりません");
+    }
+  } catch (e) {
+    console.warn("BNPエラー:", e);
+  }
+          showResult();
+        }
+      }
+    });
+  }
 
 
 
+// ===============================
+// 🔹 結果画面
+// ===============================
+function showResult() {
+
+  const percentage =
+    questions.length === 0
+      ? 0
+      : Math.round((score / questions.length) * 1000) / 10;
+
+  document.getElementById("content").innerHTML = `
+    <div style="max-width:900px;margin:80px auto;
+                text-align:center;font-family:sans-serif;">
+
+      <h1 style="font-size:48px;margin-bottom:10px;">
+        ${score} / ${questions.length} 問正解
+        (${percentage.toFixed(1)}％)
+      </h1>
+
+      <div style="margin-top:40px;">
+        <button id="back-to-menu"
+          style="padding:12px 30px;margin-right:20px;
+                 border:none;border-radius:12px;
+                 background:#1e3a8a;color:white;">
+          メニューへ戻る
+        </button>
+
+        <button id="view-detail"
+          style="padding:12px 30px;
+                 border:none;border-radius:12px;
+                 background:#374151;color:white;">
+          くわしく見る
+        </button>
+      </div>
+
+      <div id="detail-area" style="margin-top:50px;"></div>
+
+    </div>
+  `;
+
+  // 🔹 メニューへ戻るボタン
+  document
+    .getElementById("back-to-menu")
+    .addEventListener("click", () => {
+      renderTestMenu();
+    });
+
+  // 🔹 詳細表示ボタン
+  document
+    .getElementById("view-detail")
+    .addEventListener("click", () => {
+
+      const detailArea = document.getElementById("detail-area");
+
+      detailArea.innerHTML = userAnswers.map((a, i) => {
+
+        const bgColor = a.score
+          ? "#ecfdf5"   // 薄緑
+          : "#fef2f2";  // 薄赤
+
+        return `
+          <div style="text-align:left;margin-bottom:20px;
+                      padding:20px;border-radius:15px;
+                      background:${bgColor};
+                      border:1px solid #e5e7eb;">
+            <strong>問題${i + 1}</strong><br><br>
+            問題：${a.question}<br>
+            あなたの解答：${a.userAnswer}<br>
+            正答：
+            <span style="color:red;font-weight:bold;">
+              ${a.correctAnswer}
+            </span>
+          </div>
+        `;
+      }).join("");
+    });
+}
+
+  showQuestion();
+}
+async function saveKanjiResult(test) {
+  try {
+
+    const uid = currentUser ? currentUser.id : 'guest';
+
+    const answersRecord = test.userAnswers.map(a => ({
+      question: a.question || "",
+      userAnswer: a.userAnswer || "",
+      correctAnswer: a.correctAnswer || "",
+      score: a.score || 0
+    }));
+
+    await addDoc(collection(db, "results"), {
+      uid,
+      type: "漢字テスト",
+      testType: "kanji",
+      score: test.correct,
+      totalScore: test.userAnswers.reduce((s, a) => s + (a?.score || 0), 0),
+      totalQuestions: test.questions.length,
+      answers: answersRecord,
+      createdAt: new Date()
+    });
+
+    console.log("🔥 漢字テスト結果を Firestore に保存しました");
+
+  } catch (err) {
+    console.error("saveKanjiResult error", err);
+  }
+}
 
 
     // ===== テストメニュー（雛形） =====
@@ -3384,7 +3806,7 @@ if (wordtestBtn) wordtestBtn.addEventListener('click', renderWordTestMenu);
 const kanjiBtn = document.getElementById('start-kanji');
 if (kanjiBtn) {
   kanjiBtn.addEventListener('click', () => {
-    renderKanjiSetup();
+    renderKanjiTestSetup();
   });
 }
 
@@ -3403,7 +3825,6 @@ if (ichimonBtn) {
     });
 }
 }
-
 
 //// ---------------------------
 // 年号テスト範囲設定画面
@@ -4795,6 +5216,19 @@ function renderHistory() {
             data-type="一問一答">一問一答</div>
         </div>
       </div>
+
+      <!-- 国語の大きなカード -->
+      <div class="card" style="border:2px solid #bbb; padding:16px 16px; margin-top:16px;">
+        <h3 style="margin:2px 0; font-size:32px; color:#f7cfa0; font-weight:900;">国語</h3>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:12px;">
+          <div class="small-card" style="
+            width:250px; height:76px; display:flex; align-items:center; justify-content:center;
+            text-align:center; border:2px solid #f7cfa0; border-radius:12px; cursor:pointer;
+            font-size:16px; font-weight:bold;"
+            data-type="漢字テスト">漢字テスト</div>
+        </div>
+      </div>
+
 
       <!-- 選択したテスト結果表示エリア -->
       <div id="history-list" style="margin-top:16px;"></div>
