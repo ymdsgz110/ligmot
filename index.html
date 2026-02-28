@@ -1556,15 +1556,6 @@ async function submitActivity(activityId, activity) {
 
 
 
-
-
-
-
-
-
-
-
-
 /* ===========================
    社会：問題管理（年号テスト）機能
    =========================== */
@@ -1811,6 +1802,7 @@ async function loadAndShowYearQuestions(keyword = '') {
 
 // ==========================
 // 一問一答：問題作成フォーム
+// ==========================
 function renderIchimonCreateForm(editData) {
   const area = document.getElementById("social-admin-area");
 
@@ -2596,7 +2588,6 @@ function renderIchimonJudge() {
   };
 }
 
-// ======================================================
 // ============================================
 // Firestore に一問一答結果を保存する関数
 // ============================================
@@ -2756,7 +2747,7 @@ function renderIchimonDetail() {
 
 
 // ===============================
-// 🔹 漢字テスト管理システム（編集対応版）
+// 漢字テスト管理システム
 // ===============================
 document
   .getElementById("menu-japaneses")
@@ -2782,6 +2773,7 @@ function renderKanjiSystem() {
           <select id="kanji-class" style="${selectStyle()}">
             <option>Dパーフェクト</option>
             <option>Dファイナル</option>
+　　　　　　<option>Haga's Selection</option>
             <option>漢字の仕上げ</option>
           </select>
 
@@ -2827,7 +2819,7 @@ function renderKanjiSystem() {
 }
 
 // ===============================
-// 🔹 保存（追加 / 更新）
+// 保存（追加 / 更新）
 // ===============================
 async function saveKanjiQuestion() {
   const className = document.getElementById("kanji-class").value;
@@ -2870,7 +2862,7 @@ async function saveKanjiQuestion() {
 }
 
 // ===============================
-// 🔹 一覧表示
+// 一覧表示
 // ===============================
 async function loadKanjiQuestions() {
   const snapshot = await getDocs(collection(db, "kanjiQuestions"));
@@ -2992,20 +2984,19 @@ function secondaryButton() {
 
 
 // ===============================
-// 🔹 漢字テスト 範囲設定画面
+// 漢字テスト 範囲設定画面
 // ===============================
 function renderKanjiTestSetup() {
 
   const area = document.getElementById("content");
-
-  const classes = ["Dパーフェクト", "Dファイナル", "漢字の仕上げ"];
+  const classes = ["Dパーフェクト", "Dファイナル", "漢字の仕上げ", "Haga's Selection"];
   const pages = ["①","②","③","④","⑤"];
 
   let selectedClass = null;
   let selectedPage = null;
 
   area.innerHTML = `
-  <div class="card" style="max-width:900px;margin:40px auto;padding:32px;text-align:center;">
+  <div class="card" style="max-width:950px;margin:30px auto;padding:30px;text-align:center;">
     <h2 style="margin-bottom:32px;">漢字テスト 範囲設定</h2>
 
     <h3 style="text-align:left;">クラスを選択してください</h3>
@@ -7166,7 +7157,7 @@ async function addBnp(amount){
   }
 }
 
-// ログイン時 1日一回ボーナス +10bnp（lastLoginBonus に日付を保存）
+// ログイン時 1日1回ボーナス +10bnp（lastLoginBonus に日付を保存）
 async function creditDailyLoginBonusIfNeeded(){
   try {
     if(!currentUser) return;
